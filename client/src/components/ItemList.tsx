@@ -48,13 +48,13 @@ export default function ItemList() {
   };
 
   return (
-    <div>
+    <div className="w-full flex flex-col items-center">
       {/* Add Item Form */}
-      <div className="mb-16">
+      <div className="w-full mb-16">
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
           <div className="space-y-6">
             <div>
-              <label htmlFor="name" className="block text-sm text-gray-500 mb-2">
+              <label htmlFor="name" className="block text-sm text-gray-500 mb-2 text-center">
                 Name
               </label>
               <input
@@ -63,12 +63,12 @@ export default function ItemList() {
                 placeholder="Enter item name"
                 value={newItem.name}
                 onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                className="w-full px-4 py-2 text-gray-900 border-b border-gray-200 focus:border-gray-900 focus:outline-none transition-colors duration-200"
+                className="w-full px-6 py-3 text-gray-900 bg-white border border-gray-200 rounded-lg focus:border-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-opacity-20 focus:outline-none transition-all duration-200 text-center shadow-sm hover:border-gray-300"
                 required
               />
             </div>
             <div>
-              <label htmlFor="description" className="block text-sm text-gray-500 mb-2">
+              <label htmlFor="description" className="block text-sm text-gray-500 mb-2 text-center">
                 Description
               </label>
               <input
@@ -77,7 +77,7 @@ export default function ItemList() {
                 placeholder="Enter description"
                 value={newItem.description}
                 onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                className="w-full px-4 py-2 text-gray-900 border-b border-gray-200 focus:border-gray-900 focus:outline-none transition-colors duration-200"
+                className="w-full px-6 py-3 text-gray-900 bg-white border border-gray-200 rounded-lg focus:border-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-opacity-20 focus:outline-none transition-all duration-200 text-center shadow-sm hover:border-gray-300"
               />
             </div>
             <div className="pt-4">
@@ -95,29 +95,31 @@ export default function ItemList() {
 
       {/* Error Message */}
       {error && (
-        <div className="max-w-2xl mx-auto mb-8">
-          <div className="px-4 py-3 text-sm text-red-600 bg-red-50 rounded-lg">
+        <div className="w-full max-w-2xl mx-auto mb-8">
+          <div className="px-4 py-3 text-sm text-red-600 bg-red-50 rounded-lg text-center">
             {error}
           </div>
         </div>
       )}
 
       {/* Items List */}
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full max-w-4xl mx-auto">
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2">
           {items.map((item) => (
             <div
               key={item.id}
-              className="p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+              className="p-8 bg-white rounded-xl hover:bg-gray-50 transition-all duration-200 border border-gray-100 shadow-sm hover:shadow-md group"
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-base font-medium text-gray-900">{item.name}</h3>
+              <div className="flex flex-col items-center space-y-3">
+                <div className="text-center flex-1 w-full">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-gray-700">{item.name}</h3>
                   {item.description && (
-                    <p className="mt-1 text-sm text-gray-500">{item.description}</p>
+                    <p className="text-base text-gray-500 group-hover:text-gray-600">{item.description}</p>
                   )}
                 </div>
-                <span className="text-xs text-gray-400">#{item.id}</span>
+                <span className="inline-flex items-center justify-center px-3 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full group-hover:bg-gray-200">
+                  #{item.id}
+                </span>
               </div>
             </div>
           ))}

@@ -5,6 +5,51 @@ from database import Base, engine, SessionLocal
 from pydantic import BaseModel
 from typing import Optional, List
 from models import Item as DBItem
+import json
+import execjs
+import os
+
+# Read the documentation from the JavaScript file
+def read_docs():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    docs_path = os.path.join(current_dir, 'config', 'docs.js')
+    
+    with open(docs_path, 'r') as file:
+        js_code = file.read()
+    
+    # Create a JavaScript context and execute the code
+    ctx = execjs.compile("""
+        const module = {exports: {}};
+        const require = (path) => {
+            if (path === './swagger') return require_swagger();
+            if (path === './itemDocs') return require_itemDocs();
+            if (path === './healthDocs') return require_healthDocs();
+        };
+        function require_swagger() {
+            const module = {exports: {}};
+            %s
+            return module.exports;
+        }
+        function require_itemDocs() {
+            const module = {exports: {}};
+            %s
+            return module.exports;
+        }
+        function require_healthDocs() {
+            const module = {exports: {}};
+            %s
+            return module.exports;
+        }
+        %s
+        module.exports;
+    """ % (
+        open(os.path.join(current_dir, 'config', 'swagger.js')).read(),
+        open(os.path.join(current_dir, 'config', 'itemDocs.js')).read(),
+        open(os.path.join(current_dir, 'config', 'healthDocs.js')).read(),
+        js_code
+    ))
+    
+    return ctx.eval("module.exports")
 
 # Model for data validation
 class ItemCreate(BaseModel):
@@ -19,7 +64,8 @@ class ItemResponse(BaseModel):
     class Config:
         from_attributes = True
 
-app = FastAPI()
+# Initialize FastAPI with the documentation
+app = FastAPI(**read_docs())
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -50,7 +96,7 @@ async def get_items(db: Session = Depends(get_db)):
     items = db.query(DBItem).all()
     return items
 
-@app.post("/api/items", response_model=ItemResponse)
+@app.post("/api/items", response_model=ItemResponse, status_code=201)
 async def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     db_item = DBItem(
         name=item.name,
