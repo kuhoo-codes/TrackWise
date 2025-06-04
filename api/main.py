@@ -5,9 +5,16 @@ from database import Base, engine, SessionLocal
 from pydantic import BaseModel
 from typing import Optional, List
 from models import Item as DBItem
-import json
 import execjs
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Get environment variables with defaults
+PORT = int(os.getenv("PORT", "8000"))
+CLIENT_URL = os.getenv("CLIENT_URL")
 
 # Read the documentation from the JavaScript file
 def read_docs():
@@ -73,7 +80,7 @@ Base.metadata.create_all(bind=engine)
 # CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite default port
+    allow_origins=[CLIENT_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -89,7 +96,10 @@ def get_db():
 
 @app.get("/")
 def root():
-    return {"message": "FastAPI with PostgreSQL is running on Mac!"}
+    return {
+        "message": "FastAPI with PostgreSQL is running!",
+        "port": PORT
+    }
 
 @app.get("/api/items", response_model=List[ItemResponse])
 async def get_items(db: Session = Depends(get_db)):
@@ -106,3 +116,7 @@ async def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_item)
     return db_item
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=True)
