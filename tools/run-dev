@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# tools/start-dev
+# Starts both backend and frontend in parallel with logging
+
+set -e
+
+# Set up log directory
+LOG_DIR="./logs"
+mkdir -p "$LOG_DIR"
+BACKEND_LOG="$LOG_DIR/api.log"
+FRONTEND_LOG="$LOG_DIR/client.log"
+
+# Cleanup function
+cleanup() {
+  echo ""
+  echo "🛑 Stopping all processes..."
+  kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+  exit 0
+}
+
+trap cleanup SIGINT SIGTERM
+
+# Start backend
+echo "🚀 Starting FastAPI backend..."
+cd api
+source .venv/bin/activate
+uvicorn main:app --reload 2>&1 | tee "$BACKEND_LOG" | sed 's/^/[backend] /' &
+BACKEND_PID=$!
+cd ..
+
+# Start frontend
+echo "🎨 Starting React+Vite frontend..."
+cd client
+pnpm dev 2>&1 | tee "$FRONTEND_LOG" | sed 's/^/[frontend] /' &
+FRONTEND_PID=$!
+cd ..
+
+# Info
+echo "-----------------------------------------------"
+echo "Backend (FastAPI) running"
+echo "Frontend (Vite) running"
+echo ""
+echo "Logs:"
+echo "  📄 Backend:  $BACKEND_LOG"
+echo "  📄 Frontend: $FRONTEND_LOG"
+echo "-----------------------------------------------"
+echo "📣 Press Ctrl+C to stop both servers"
+echo ""
+
+# Wait until both exit
+wait $BACKEND_PID $FRONTEND_PID
