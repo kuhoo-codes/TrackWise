@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# tools/lint-api
+# Usage:
+#   ./tools/lint-api [target_dir] [--fix]
+#
+# Requirements:
+#   - uv and ruff must be installed
+#   - script must have executable permission: chmod +x tools/lint-api
+
+set -e
+
+# Ensure virtual environment is activated
+if [ -n "$VIRTUAL_ENV" ]; then
+  echo "✅ Virtual environment is activated: $VIRTUAL_ENV"
+else
+  echo "❌ Virtual environment not detected."
+  echo "👉 Run 'source api/.venv/bin/activate' (Unix-like) or 'api\\.venv\\Scripts\\activate' (Windows)."
+  echo "ℹ️  To initialize the project or recreate the environment, run:"
+  echo "    ./tools/init-api        (for backend only)"
+  echo "    ./tools/init            (for full project setup)"
+  exit 1
+fi
+
+# Directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET_DIR="$SCRIPT_DIR/../api"
+FIX_MODE=false
+
+# Parse arguments
+for arg in "$@"; do
+  if [[ "$arg" == "--fix" ]]; then
+    FIX_MODE=true
+  else
+    TARGET_DIR="$(realpath "$arg")"
+  fi
+done
+
+# Check for uv
+if ! command -v uv &>/dev/null; then
+  echo "❌ 'uv' is not installed."
+  echo "ℹ️  To set up the environment, run './tools/init-api' or './tools/init'."
+  exit 1
+fi
+
+# Check for ruff
+if ! command -v ruff &>/dev/null; then
+  echo "❌ 'ruff' is not installed."
+  echo "ℹ️  To install it, run './tools/init-api' or './tools/init'."
+  exit 1
+fi
+
+echo ""
+echo "🔍 Running lint checks on $TARGET_DIR using Ruff..."
+echo ""
+
+if $FIX_MODE; then
+  ruff check "$TARGET_DIR" --fix || {
+    echo "❌ Linting failed (even after auto-fix)."
+    exit 1
+  }
+else
+  ruff check "$TARGET_DIR" || {
+    echo "❌ Linting failed."
+    echo "👉 Run './tools/lint-api $TARGET_DIR --fix' to auto-fix issues."
+    exit 1
+  }
+fi
+
+echo ""
+echo "🧹 Checking formatting on $TARGET_DIR using Ruff..."
+echo ""
+
+if $FIX_MODE; then
+  ruff format "$TARGET_DIR"
+else
+  ruff format "$TARGET_DIR" --check || {
+    echo "❌ Formatting check failed."
+    echo "👉 Run './tools/lint-api $TARGET_DIR --fix' to auto-fix formatting."
+    exit 1
+  }
+fi
+
+echo ""
+echo "✅ Backend linting and formatting successful!"

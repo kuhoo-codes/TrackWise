@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# tools/init
+# Usage:
+#   ./tools/init
+#
+# Requirements:
+#   - script must have executable permission: chmod +x tools/init (only for first run)
+
+set -e
+
+echo "🏃‍♂️ Running ./tools/init"
+echo ""
+
+# Resolve script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo "🔒 Ensuring all scripts in $SCRIPT_DIR have executable permission..."
+
+# Grant chmod +x to all files in tools directory (no extension required)
+find "$SCRIPT_DIR" -type f | while read -r script; do
+  if [ ! -x "$script" ]; then
+    echo "➕ Adding executable permission to $script"
+    chmod +x "$script"
+  fi
+done
+
+echo ""
+echo "✅ All scripts have executable permissions."
+echo ""
+
+echo ""
+echo "🏃‍♂️ Running ./tools/init-api"
+echo ""
+
+"$SCRIPT_DIR/init-api"
+BACKEND_EXIT_CODE=$?
+
+if [ $BACKEND_EXIT_CODE -ne 0 ]; then
+  echo "❌ ./tools/init-api failed."
+  exit 1
+fi
+
+echo ""
+echo "🏃‍♂️ Running ./tools/init-client"
+echo ""
+
+"$SCRIPT_DIR/init-client"
+FRONTEND_EXIT_CODE=$?
+
+if [ $FRONTEND_EXIT_CODE -ne 0 ]; then
+  echo "❌ ./tools/init-client failed."
+  exit 1
+fi
+
+echo ""
+echo "✅ Project is successfully initialised!"
+echo ""

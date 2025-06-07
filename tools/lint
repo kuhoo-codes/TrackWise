@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# tools/lint
+# Usage:
+#   ./tools/lint [--fix]
+#
+# Requirements:
+#   - uv must be installed
+#   - script must have executable permission: chmod +x tools/lint
+
+FIX_MODE=false
+
+# Parse arguments
+for arg in "$@"; do
+  if [[ "$arg" == "--fix" ]]; then
+    FIX_MODE=true
+  fi
+done
+
+echo "🏃‍♂️ Running ./tools/lint-api"
+echo ""
+
+if $FIX_MODE; then
+  tools/lint-api --fix
+else
+  tools/lint-api
+fi
+BACKEND_EXIT_CODE=$?
+
+if [ $BACKEND_EXIT_CODE -ne 0 ]; then
+  echo "❌ Backend linting failed."
+  echo "Run './tools/lint --fix' to auto-fix some lint issues."
+  exit 1
+fi
+
+echo "🏃‍♂️ Running ./tools/lint-client"
+echo ""
+
+if $FIX_MODE; then
+  tools/lint-client --fix
+else
+  tools/lint-client
+fi
+FRONTEND_EXIT_CODE=$?
+
+if [ $FRONTEND_EXIT_CODE -ne 0 ]; then
+  echo "❌ Frontend linting failed."
+  echo "Run './tools/lint --fix' to auto-fix some lint issues."
+  exit 1
+fi
+
+echo "✅ All linting successful!"
+echo ""
+

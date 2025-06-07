@@ -17,9 +17,15 @@ TrackWise/
 
 ## Prerequisites
 
-- Python 3.8 or higher
 - Node.js 16 or higher
 - PostgreSQL
+
+## Setup
+
+1. To initialize both the backend and frontend environments, run:
+```bash
+sh ./tools/init
+```
 
 ## Backend Setup
 
@@ -28,29 +34,18 @@ TrackWise/
 cd api
 ```
 
-2. Create a Python virtual environment:
-```bash
-python -m venv venv
-```
-
-3. Activate the virtual environment:
-
+2. Activate the virtual environment:
 On macOS/Linux:
 ```bash
-source venv/bin/activate
+source .venv/bin/activate
 ```
 
 On Windows:
 ```bash
-.\venv\Scripts\activate
+.\.venv\Scripts\activate
 ```
 
-4. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-5. Start the FastAPI server:
+3. Start the FastAPI server:
 ```bash
 uvicorn main:app --reload
 ```
@@ -68,14 +63,9 @@ API Documentation available at:
 cd client
 ```
 
-2. Install dependencies:
+2. Start the development server:
 ```bash
-npm install
-```
-
-3. Start the development server:
-```bash
-npm run dev
+pnpm run dev
 ```
 
 The frontend will be running at http://localhost:5173
