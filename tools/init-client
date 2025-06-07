@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# tools/init-client
+# Usage:
+#   ./tools/init-client
+#
+# Requirements:
+#   - This script must be executable: chmod +x tools/init-client
+
+set -e
+
+echo "🎨 Initializing frontend environment..."
+
+# Resolve script and client directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLIENT_DIR="$SCRIPT_DIR/../client"
+
+# Move into client directory
+if cd "$CLIENT_DIR"; then
+  echo "📁 Entered $CLIENT_DIR"
+else
+  echo "❌ Failed to change directory to $CLIENT_DIR"
+  exit 1
+fi
+
+# Check for pnpm
+if ! command -v pnpm &> /dev/null; then
+  echo "❌ 'pnpm' is not installed."
+  echo "👉 Installing pnpm globally: 'npm install -g pnpm'"
+  npm install -g pnpm
+fi
+
+# Install dependencies
+echo "📦 Installing dependencies with pnpm..."
+if pnpm install; then
+  echo ""
+  echo "✅ Frontend dependencies installed successfully!"
+else
+  echo "❌ pnpm install failed."
+  exit 1
+fi
+
+echo ""
+echo "✅ Frontend initialization successful!"

@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# tools/lint-client
+# Usage:
+#   ./tools/lint-client [target_dir] [--fix]
+#
+# Requirements:
+#   - 'pnpm install' must have been run
+#   - Script must have executable permission: chmod +x tools/lint-client
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET_DIR="$SCRIPT_DIR/../client"
+FIX_MODE=false
+
+# Parse arguments
+for arg in "$@"; do
+  if [[ "$arg" == "--fix" ]]; then
+    FIX_MODE=true
+  else
+    TARGET_DIR="$(realpath "$arg")"
+  fi
+done
+
+cd "$TARGET_DIR" || {
+  echo "❌ Failed to change directory to $TARGET_DIR"
+  exit 1
+}
+
+# Check for node_modules
+if [ ! -d "node_modules" ]; then
+  echo "❌ Frontend dependencies not found (node_modules missing)."
+  echo "ℹ️  Initialize the project with:"
+  echo "    ./tools/init-client    (for frontend only)"
+  echo "    ./tools/init           (for full project setup)"
+  exit 1
+fi
+
+# Check for pnpm
+if ! command -v pnpm &> /dev/null; then
+  echo "❌ 'pnpm' is not installed."
+  echo "ℹ️  Initialize the project with:"
+  echo "    ./tools/init-client    (for frontend only)"
+  echo "    ./tools/init           (for full project setup)"
+  exit 1
+fi
+
+# Run lint and format
+echo "🔍 Running lint checks in $TARGET_DIR using pnpm..."
+echo ""
+
+if $FIX_MODE; then
+  pnpm run lint:fix || {
+    echo "❌ Linting or formatting failed even after attempting fixes."
+    exit 1
+  }
+else
+  pnpm run lint || {
+    echo "❌ Linting or formatting failed."
+    echo "👉 Run './tools/lint-client $TARGET_DIR --fix' to auto-fix issues."
+    exit 1
+  }
+fi
+
+echo ""
+echo "✅ Frontend linting and formatting successful!"
