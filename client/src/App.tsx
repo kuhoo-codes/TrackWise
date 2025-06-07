@@ -1,23 +1,17 @@
-import ItemList from './components/ItemList'
+import ItemList from "./components/ItemList";
 
-function App() {
-  return (
-    <div className="min-h-screen bg-white flex flex-col items-center">
+const App = () => (
+  <div className="min-h-screen bg-white flex flex-col items-center">
+    {/* Main Content */}
+    <main className="container flex-grow">
+      <div className="text-center mb-16">
+        <h1 className="text-4xl font-light tracking-tight text-gray-900 sm:text-5xl">
+          TrackWise
+        </h1>
+      </div>
+      <ItemList />
+    </main>
+  </div>
+);
 
-      {/* Main Content */}
-      <main className="container flex-grow">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-light tracking-tight text-gray-900 sm:text-5xl">
-            TrackWise
-          </h1>
-        </div>
-
-        {/* Item List Component connected to Backend */}
-        {/* <ItemList /> */}
-      </main>
-
-    </div>
-  )
-}
-
-export default App
+export default App;
