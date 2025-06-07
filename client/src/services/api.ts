@@ -1,3 +1,5 @@
+import { API_BASE_URL } from "./config";
+
 interface Item {
   id: number;
   name: string;
@@ -7,7 +9,7 @@ interface Item {
 export const api = {
   // Get all items
   getItems: async (): Promise<Item[]> => {
-    const response = await fetch("/api/items");
+    const response = await fetch(`${API_BASE_URL}/api/items`);
     if (!response.ok) {
       throw new Error("Failed to fetch items");
     }

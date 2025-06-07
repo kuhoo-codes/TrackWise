@@ -10,18 +10,6 @@
 
 set -e
 
-# Ensure virtual environment is activated
-if [ -n "$VIRTUAL_ENV" ]; then
-  echo "✅ Virtual environment is activated: $VIRTUAL_ENV"
-else
-  echo "❌ Virtual environment not detected."
-  echo "👉 Run 'source api/.venv/bin/activate' (Unix-like) or 'api\\.venv\\Scripts\\activate' (Windows)."
-  echo "ℹ️  To initialize the project or recreate the environment, run:"
-  echo "    ./tools/init-api        (for backend only)"
-  echo "    ./tools/init            (for full project setup)"
-  exit 1
-fi
-
 # Directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_DIR="$SCRIPT_DIR/../api"
@@ -45,8 +33,17 @@ fi
 
 # Check for ruff
 if ! command -v ruff &>/dev/null; then
-  echo "❌ 'ruff' is not installed."
-  echo "ℹ️  To install it, run './tools/init-api' or './tools/init'."
+  # Ensure virtual environment is activated
+  if [ -n "$VIRTUAL_ENV" ]; then
+    echo "❌ 'ruff' is not installed."
+    echo "ℹ️  To install it, run './tools/init-api' or './tools/init'."
+  else
+    echo "❌ Virtual environment not detected."
+    echo "👉 Run 'source api/.venv/bin/activate' (Unix-like) or 'api\\.venv\\Scripts\\activate' (Windows)."
+    echo "ℹ️  To initialize the project or recreate the environment, run:"
+    echo "    ./tools/init-api        (for backend only)"
+    echo "    ./tools/init            (for full project setup)"
+  fi
   exit 1
 fi
 
