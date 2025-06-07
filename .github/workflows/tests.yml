@@ -1,0 +1,46 @@
+name: Run Tests
+
+description: This workflow runs tests on the codebase when a push event occurs.
+
+run-name: Run Tests on ${{ github.event_name }} event
+
+on: [push]
+
+env:
+  PYTHON_VERSION: '3.10'
+  NODE_VERSION: '23.x'
+
+jobs:
+  Run-Tests:
+    name: Run Tests Job
+    environment: dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout TrackWise
+        uses: actions/checkout@v4
+
+      - name: Setup Python Environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Setup Node Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Initialize TrackWise
+        run: |
+          echo "Initializing TrackWise..."
+          bash "$GITHUB_WORKSPACE/tools/init"
+
+      - name: Lint Frontend
+        run: |
+          echo "Running linter..."
+          bash "$GITHUB_WORKSPACE/tools/lint-client"
+
+      - name: Lint Backend
+        run: |
+          echo "Running linter..."
+          source api/.venv/bin/activate
+          bash "$GITHUB_WORKSPACE/tools/lint-api"
