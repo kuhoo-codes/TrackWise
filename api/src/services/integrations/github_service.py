@@ -1,0 +1,46 @@
+import secrets
+
+import httpx
+from fastapi import HTTPException, status
+
+from src.core.config import settings
+from src.repositories.github_repo import GitHubRepository
+from src.schemas.integrations.github import TokenResponse
+
+
+class GitHubService:
+    def __init__(self, repo: GitHubRepository) -> None:
+        self.repo = repo
+
+    async def get_auth_url(self, user_id: str) -> str:
+        state = secrets.token_urlsafe(16)
+        await self.repo.save_state(state, user_id)
+
+        params = {
+            "client_id": settings.GITHUB_CLIENT_ID,
+            "state": state,
+        }
+        return f"https://github.com/login/oauth/authorize?{httpx.QueryParams(params)}"
+
+    async def handle_callback(self, code: str, state: str) -> TokenResponse:
+        state_record = await self.repo.validate_state(state)
+        user_id = state_record.user_id
+        token_data = await self.exchange_github_code(
+            code=code, client_id=settings.GITHUB_CLIENT_ID, client_secret=settings.GITHUB_CLIENT_SECRET
+        )
+        github_token = await self.repo.save_token(user_id, token_data)
+
+        return TokenResponse(access_token=github_token.access_token, token_type=github_token.token_type)
+
+    async def exchange_github_code(self, code: str, client_id: str, client_secret: str) -> dict:
+        """Handle GitHub OAuth code exchange"""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://github.com/login/oauth/access_token",
+                json={"client_id": client_id, "client_secret": client_secret, "code": code},
+                headers={"Accept": "application/json"},
+            )
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to get GitHub access token")
+        return response.json()
