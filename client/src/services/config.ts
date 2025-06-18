@@ -7,3 +7,4 @@ const getApiBaseUrl = () => {
 };
 
 export const API_BASE_URL = getApiBaseUrl();
+export const MINIMUM_PASSWORD_LENGTH = 8;
