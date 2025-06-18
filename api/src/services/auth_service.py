@@ -7,7 +7,7 @@ from passlib.context import CryptContext
 from src.core.config import settings
 from src.models.users import User
 from src.repositories.user_repository import UserRepository
-from src.schemas.users import Token, UserCreate
+from src.schemas.users import UserCreate
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -67,7 +67,7 @@ class AuthService:
 
         return self.user_repo.create_user(db_user)
 
-    def authenticate_user(self, email: str, password: str) -> Token:
+    def authenticate_user(self, email: str, password: str) -> User:
         """Authenticate user and return access token."""
         # Get user by email
         user = self.user_repo.get_user_by_email(email)
@@ -86,9 +86,14 @@ class AuthService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Create access token
-        access_token = self.create_access_token(
-            data={"sub": user.email, "user_id": user.id, "user_name": user.name},
-        )
+        return user
 
-        return Token(access_token=access_token, token_type=settings.TOKEN_TYPE)
+    def get_user_by_email(self, email: str) -> User:
+        """Get user by email."""
+        user = self.user_repo.get_user_by_email(email)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        return user

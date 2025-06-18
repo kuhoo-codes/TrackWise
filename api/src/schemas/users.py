@@ -3,6 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, field_validator
 
+from src.core.config import settings
 from src.schemas.base import TimestampSchema
 
 
@@ -18,7 +19,7 @@ class UserCreate(UserBase):
     @classmethod
     def validate_password(cls, v: str) -> str:
         """Validate password strength."""
-        if len(v) < 8:
+        if len(v) < settings.MINIMUM_PASSWORD_LENGTH:
             raise Exception()
         if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
             raise Exception()
@@ -42,3 +43,4 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    user: User | None = None
