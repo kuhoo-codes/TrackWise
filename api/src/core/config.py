@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET")
     GITHUB_CALLBACK_URL: str = "http://localhost:{PORT}/integration/github/callback"
     TOKEN_TYPE: str = os.getenv("TOKEN_TYPE", "Bearer")
+    MINIMUM_PASSWORD_LENGTH: int = 8
 
     class Config:
         env_file = ".env"
