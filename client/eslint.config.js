@@ -15,6 +15,7 @@ export default [
       "**/node_modules/**",
       "**/build/**",
       "vite.config.ts",
+      "src/components",
     ],
   },
   {
@@ -59,6 +60,7 @@ export default [
 
     rules: {
       // React rules
+      "react/no-unescaped-entities": "off",
       "react/jsx-uses-react": "error",
       "react/jsx-uses-vars": "error",
       "react/react-in-jsx-scope": "off",
@@ -137,6 +139,19 @@ export default [
             regex: "^(Content-Type|Accept|Authorization|X-.*)$",
             match: false,
           },
+        },
+        {
+          selector: "objectLiteralProperty",
+          format: ["camelCase", "UPPER_CASE"],
+          leadingUnderscore: "allow",
+          filter: {
+            regex: "^(Content-Type|Accept|Authorization|X-.*)$",
+            match: false,
+          },
+        },
+        {
+          selector: "function",
+          format: ["camelCase", "PascalCase"],
         },
         {
           selector: "import",

@@ -1,34 +1,10 @@
+import Axios from "axios";
 import { API_BASE_URL } from "./config";
 
-interface Item {
-  id: number;
-  name: string;
-  description?: string;
-}
-
-export const api = {
-  // Get all items
-  getItems: async (): Promise<Item[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/items`);
-    if (!response.ok) {
-      throw new Error("Failed to fetch items");
-    }
-    return response.json();
+export const api = Axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
   },
-
-  // Create a new item
-  createItem: async (item: Omit<Item, "id">): Promise<Item> => {
-    const response = await fetch("/api/items", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(item),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to create item");
-    }
-    return response.json();
-  },
-};
+});
