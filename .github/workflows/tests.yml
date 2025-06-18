@@ -4,7 +4,10 @@ description: This workflow runs tests on the codebase when a push event occurs.
 
 run-name: Run Tests on ${{ github.event_name }} event
 
-on: [push]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 
 env:
   PYTHON_VERSION: '3.10'
