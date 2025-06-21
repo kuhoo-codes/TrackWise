@@ -22,7 +22,7 @@ def get_auth_service(db: Annotated[Session, Depends(get_db)]) -> AuthService:
 @router.post("/signup", status_code=status.HTTP_201_CREATED, response_model=Token)
 async def signup(user: UserCreate, auth_service: Annotated[AuthService, Depends(get_auth_service)]) -> Token:
     """Sign up a new user."""
-    user = auth_service.create_user(user_data=user)
+    user = await auth_service.create_user(user_data=user)
     access_token = auth_service.create_access_token(
         data={"sub": user.email},
     )
@@ -35,7 +35,7 @@ async def login(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> Token:
     """Login user and return access token."""
-    user = auth_service.authenticate_user(email=user_credentials.email, password=user_credentials.password)
+    user = await auth_service.authenticate_user(email=user_credentials.email, password=user_credentials.password)
 
     # Create access token
     access_token = auth_service.create_access_token(
@@ -60,5 +60,5 @@ async def get_user_data(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    user = auth_service.get_user_by_email(email=email)
+    user = await auth_service.get_user_by_email(email=email)
     return User.model_validate(user)
