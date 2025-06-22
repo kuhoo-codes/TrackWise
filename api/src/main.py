@@ -1,6 +1,5 @@
 from typing import Any
 
-# from models import Item as DBItem
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
