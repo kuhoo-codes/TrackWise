@@ -1,10 +1,16 @@
 from datetime import datetime, timedelta
 
-from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-from src.core.config import settings
+from src.core.config import Errors, settings
+from src.exceptions.auth import (
+    AuthenticationError,
+    InvalidTokenError,
+    TokenExpiredError,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
 from src.models.users import User
 from src.repositories.user_repository import UserRepository
 from src.schemas.users import UserCreate
@@ -42,18 +48,18 @@ class AuthService:
         """Verify and decode JWT token."""
         try:
             return jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-        except JWTError:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            ) from None
+        except jwt.ExpiredSignatureError as e:
+            raise TokenExpiredError(Errors.TOKEN_EXPIRED.value) from e
+        except JWTError as e:
+            error_message = f"Invalid token: {e}"
+            raise InvalidTokenError(error_message) from e
 
     async def create_user(self, user_data: UserCreate) -> User:
         """Create a new user."""
         # Check if user already exists
-        if await self.user_repo.get_user_by_email(user_data.email):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        existing_user = await self.user_repo.get_user_by_email(user_data.email)
+        if existing_user:
+            raise UserAlreadyExistsError(Errors.USER_ALREADY_EXISTS.value, details={"email": user_data.email})
 
         # Hash password and create user
         hashed_password = self.hash_password(user_data.password)
@@ -72,19 +78,11 @@ class AuthService:
         # Get user by email
         user = await self.user_repo.get_user_by_email(email)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise AuthenticationError(Errors.INVALID_EMAIL_OR_PASSWORD.value, details={"email": email})
 
         # Verify password
         if not self.verify_password(password, user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise AuthenticationError(Errors.INVALID_EMAIL_OR_PASSWORD.value, details={"email": email})
 
         return user
 
@@ -92,8 +90,5 @@ class AuthService:
         """Get user by email."""
         user = await self.user_repo.get_user_by_email(email)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+            raise UserNotFoundError(Errors.USER_NOT_FOUND.value, details={"email": email})
         return user

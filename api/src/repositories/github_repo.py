@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
 
-from fastapi import HTTPException, status
 from jose import jwt
 
-from src.core.config import settings
+from src.core.config import Errors, settings
+from src.exceptions.external import GitHubIntegrationError
 from src.schemas.integrations.github import GitHubToken, StateRecord, TokenResponse
 
 
@@ -21,10 +21,12 @@ class GitHubRepository:
         """Validate and return user_id associated with state"""
         record = self.state_store.get(f"github:state:{state}")
         if not record:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state parameter")
+            raise GitHubIntegrationError(
+                Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "Invalid state parameter"}
+            )
 
         if record.used:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="State already used")
+            raise GitHubIntegrationError(Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "State already used"})
         record.used = True
         self.state_store[f"github:state:{state}"] = record
 
