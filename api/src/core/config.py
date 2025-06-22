@@ -1,10 +1,21 @@
 import os
+from enum import Enum
 
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
 # Load environment variables
 load_dotenv()
+
+
+class Errors(str, Enum):
+    USER_ALREADY_EXISTS: str = "User with this email already exists"
+    USER_NOT_FOUND: str = "User not found"
+    INVALID_EMAIL_OR_PASSWORD: str = "Invalid email or password"  # noqa: S105
+    TOKEN_EXPIRED: str = "Token has expired"  # noqa: S105
+    TOKEN_MISSING_PAYLOAD: str = "Token payload missing subject"  # noqa: S105
+    PASSWORD_MUST_CONTAIN_SPECIAL_CHARACTER: str = "Password must contain at least one special character"  # noqa: S105
+    GITHUB_INTEGRATION_ERROR: str = "GitHub integration error"
 
 
 class Settings(BaseSettings):

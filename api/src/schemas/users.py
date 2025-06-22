@@ -3,7 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, field_validator
 
-from src.core.config import settings
+from src.core.config import Errors, settings
+from src.exceptions.validation import ValidationError
 from src.schemas.base import TimestampSchema
 
 
@@ -20,9 +21,15 @@ class UserCreate(UserBase):
     def validate_password(cls, v: str) -> str:
         """Validate password strength."""
         if len(v) < settings.MINIMUM_PASSWORD_LENGTH:
-            raise Exception()
+            error_message = f"Password must be at least {settings.MINIMUM_PASSWORD_LENGTH} characters long"
+            raise ValidationError(
+                error_message, details={"field": "password", "min_length": settings.MINIMUM_PASSWORD_LENGTH}
+            )
         if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
-            raise Exception()
+            raise ValidationError(
+                Errors.PASSWORD_MUST_CONTAIN_SPECIAL_CHARACTER.value,
+                details={"field": "password", "requirement": "special_character"},
+            )
         return v
 
 

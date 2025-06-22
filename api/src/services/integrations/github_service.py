@@ -1,11 +1,11 @@
 import secrets
 
 import httpx
-from fastapi import HTTPException, status
 
-from src.core.config import settings
+from src.core.config import Errors, settings
+from src.exceptions.external import GitHubIntegrationError
 from src.repositories.github_repo import GitHubRepository
-from src.schemas.integrations.github import TokenResponse
+from src.schemas.integrations.github import GitHubToken, GitHubTokenError, TokenResponse
 
 
 class GitHubService:
@@ -32,15 +32,20 @@ class GitHubService:
 
         return TokenResponse(access_token=github_token.access_token, token_type=github_token.token_type)
 
-    async def exchange_github_code(self, code: str, client_id: str, client_secret: str) -> dict:
+    async def exchange_github_code(self, code: str, client_id: str, client_secret: str) -> GitHubToken:
         """Handle GitHub OAuth code exchange"""
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 "https://github.com/login/oauth/access_token",
                 json={"client_id": client_id, "client_secret": client_secret, "code": code},
                 headers={"Accept": "application/json"},
             )
-
-        if response.status_code != 200:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to get GitHub access token")
-        return response.json()
+        token_response: GitHubToken | GitHubTokenError = response.json()
+        if "error" in token_response:
+            token_response = GitHubTokenError(**token_response)
+            raise GitHubIntegrationError(
+                Errors.GITHUB_INTEGRATION_ERROR.value,
+                details={"error": token_response.error_description},
+            )
+        return token_response
