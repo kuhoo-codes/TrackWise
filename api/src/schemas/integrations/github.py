@@ -28,7 +28,3 @@ class StateRecord(BaseModel):
     user_id: str
     created_at: datetime
     used: bool = False
-
-
-class TokenData(BaseModel):
-    user_id: str
