@@ -4,9 +4,8 @@ from fastapi import APIRouter, Depends, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from src.core.config import Errors, settings
+from src.core.config import settings
 from src.db.database import get_db
-from src.exceptions.auth import InvalidTokenError
 from src.repositories.user_repository import UserRepository
 from src.schemas.users import Token, User, UserCreate, UserLogin
 from src.services.auth_service import AuthService
@@ -50,12 +49,8 @@ async def login(
 async def get_user_data(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
-) -> Token:
+) -> User:
     """Login user and return access token."""
-    token = credentials.credentials
-    payload = auth_service.verify_token(token=token)
-    email: str = payload.get("sub", None)
-    if email is None:
-        raise InvalidTokenError(Errors.TOKEN_MISSING_PAYLOAD.value, details={"token_payload": payload})
+    email = auth_service.verify_token(token=credentials.credentials)
     user = await auth_service.get_user_by_email(email=email)
     return User.model_validate(user)

@@ -44,10 +44,14 @@ class AuthService:
         to_encode.update({"exp": expire})
         return jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
 
-    def verify_token(self, token: str) -> dict:
+    def verify_token(self, token: str) -> str:
         """Verify and decode JWT token."""
         try:
-            return jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            user_id = payload.get("sub")
+            if user_id is None:
+                raise InvalidTokenError(Errors.TOKEN_MISSING_PAYLOAD.value, details={"token_payload": payload})
+            return user_id
         except jwt.ExpiredSignatureError as e:
             raise TokenExpiredError(Errors.TOKEN_EXPIRED.value) from e
         except JWTError as e:
