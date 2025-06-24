@@ -10,26 +10,51 @@ import {
   type User,
   type LoginRequest,
   type SignupRequest,
+  type APIError,
 } from "../../services/auth";
 import { TokenStorage } from "../../services/tokenStorage";
 
-interface AuthContextType {
+interface AuthState {
   user: User | null;
-  isAuthenticated: boolean;
   isLoading: boolean;
-  error: string | null;
+  error: APIError | null;
+}
+interface AuthContextType extends AuthState {
+  isAuthenticated: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
   signup: (userData: SignupRequest) => Promise<void>;
   logout: () => void;
   clearError: () => void;
+  resetAuthState: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    isLoading: true,
+    error: null,
+  });
+
+  const resetAuthState = () => {
+    setState({
+      user: null,
+      isLoading: false,
+      error: null,
+    });
+  };
+
+  const handleError = (error: unknown): APIError => {
+    if (isAPIError(error)) {
+      return error;
+    }
+    return {
+      code: "UNKNOWN_ERROR",
+      message:
+        error instanceof Error ? error.message : "An unknown error occurred",
+    };
+  };
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -37,13 +62,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const token = TokenStorage.getToken();
         if (token) {
           const userData = await AuthService.validateToken(token);
-          setUser(userData);
+          setState((prev) => ({ ...prev, user: userData }));
+        } else {
+          resetAuthState();
+          return;
         }
       } catch (error) {
-        console.warn("Failed to validate token:", error);
+        setState((prev) => ({
+          ...prev,
+          error: handleError(error),
+          user: null,
+        }));
         TokenStorage.removeTokens();
       } finally {
-        setIsLoading(false);
+        setState((prev) => ({ ...prev, isLoading: false }));
       }
     };
 
@@ -52,69 +84,86 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (credentials: LoginRequest): Promise<void> => {
     try {
-      setError(null);
-      setIsLoading(true);
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       const response = await AuthService.login(credentials);
 
       TokenStorage.setToken(response.accessToken);
 
-      setUser(response.user);
+      setState({
+        user: response.user,
+        isLoading: false,
+        error: null,
+      });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Login failed";
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      const normalizedError = handleError(error);
+      setState((prev) => ({
+        ...prev,
+        error: normalizedError,
+        isLoading: false,
+      }));
+      throw normalizedError;
     }
   };
 
   const signup = async (userData: SignupRequest): Promise<void> => {
     try {
-      setError(null);
-      setIsLoading(true);
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       const response = await AuthService.signup(userData);
 
       TokenStorage.setToken(response.accessToken);
 
-      setUser(response.user);
+      setState({
+        user: response.user,
+        isLoading: false,
+        error: null,
+      });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Signup failed";
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      const normalizedError = handleError(error);
+      setState((prev) => ({
+        ...prev,
+        error: normalizedError,
+        isLoading: false,
+      }));
+      throw normalizedError;
     }
   };
 
   const logout = (): void => {
-    setIsLoading(true);
     TokenStorage.removeTokens();
-    setUser(null);
-    setError(null);
-    setIsLoading(false);
+    resetAuthState();
   };
 
   const clearError = (): void => {
-    setError(null);
+    setState((prev) => ({
+      ...prev,
+      error: null,
+    }));
   };
 
   const value: AuthContextType = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    error,
+    user: state.user,
+    isAuthenticated: !!state.user,
+    isLoading: state.isLoading,
+    error: state.error,
     login,
     signup,
     logout,
     clearError,
+    resetAuthState,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+const isAPIError = (error: unknown): error is APIError =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  "message" in error &&
+  typeof error.code === "string" &&
+  typeof error.message === "string";
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
