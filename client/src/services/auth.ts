@@ -23,7 +23,7 @@ export interface SignupRequest extends LoginRequest {
 export interface AuthResponse {
   user: User;
   accessToken: string;
-  type: string;
+  tokenType: string;
 }
 
 const APIErrorSchema = z.object({
@@ -76,8 +76,14 @@ export class AuthService {
 
   static async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
-      const response = await api.post<AuthResponse>("/auth/login", credentials);
-      return response.data;
+      const response = await api.post("/auth/login", credentials);
+      const data = response.data;
+      const authData: AuthResponse = {
+        user: data.user,
+        accessToken: data.access_token,
+        tokenType: data.token_type,
+      };
+      return authData;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -85,8 +91,14 @@ export class AuthService {
 
   static async signup(userData: SignupRequest): Promise<AuthResponse> {
     try {
-      const response = await api.post<AuthResponse>("/auth/signup", userData);
-      return response.data;
+      const response = await api.post("/auth/signup", userData);
+      const data = response.data;
+      const authData: AuthResponse = {
+        user: data.user,
+        accessToken: data.access_token,
+        tokenType: data.token_type,
+      };
+      return authData;
     } catch (error) {
       throw this.handleError(error);
     }
