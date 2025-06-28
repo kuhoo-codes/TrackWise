@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
 from src.db.database import get_db
@@ -14,7 +14,7 @@ router = APIRouter(tags=["Auth"], prefix="/auth")
 security = HTTPBearer()
 
 
-def get_auth_service(db: Annotated[Session, Depends(get_db)]) -> AuthService:
+def get_auth_service(db: Annotated[AsyncSession, Depends(get_db)]) -> AuthService:
     """Dependency to get AuthService with database session."""
     return AuthService(UserRepository(db))
 
