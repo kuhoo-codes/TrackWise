@@ -2,8 +2,10 @@ from datetime import datetime, timedelta
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from redis.exceptions import ConnectionError
 
 from src.core.config import Errors, settings
+from src.core.redis_db import redis_client
 from src.exceptions.auth import (
     AuthenticationError,
     InvalidTokenError,
@@ -11,6 +13,7 @@ from src.exceptions.auth import (
     UserAlreadyExistsError,
     UserNotFoundError,
 )
+from src.exceptions.external import ExternalServiceError
 from src.models.users import User
 from src.repositories.user_repository import UserRepository
 from src.schemas.users import UserCreate
@@ -47,6 +50,8 @@ class AuthService:
     def verify_token(self, token: str) -> str:
         """Verify and decode JWT token."""
         try:
+            if self.is_token_blacklisted(token):
+                raise TokenExpiredError(Errors.TOKEN_EXPIRED.value)
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
             user_id = payload.get("sub")
             if user_id is None:
@@ -96,3 +101,21 @@ class AuthService:
         if not user:
             raise UserNotFoundError(Errors.USER_NOT_FOUND.value, details={"email": email})
         return user
+
+    async def add_to_blacklist(self, token: str) -> None:
+        """Add token to blacklist with TTL"""
+        try:
+            redis_client.set(token, "blacklisted", ex=self.access_token_expire_minutes * 60)
+        except ConnectionError as e:
+            raise ExternalServiceError(Errors.REDIS_CONNECTION_ERROR.value, details={"error": str(e)}) from e
+        except Exception as e:
+            raise ExternalServiceError(details={"error": str(e)}) from e
+
+    def is_token_blacklisted(self, token: str) -> bool:
+        """Check if token is blacklisted"""
+        try:
+            return redis_client.exists(token) == 1
+        except ConnectionError as e:
+            raise ExternalServiceError(Errors.REDIS_CONNECTION_ERROR.value, details={"error": str(e)}) from e
+        except Exception as e:
+            raise ExternalServiceError(details={"error": str(e)}) from e

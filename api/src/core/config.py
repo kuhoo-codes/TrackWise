@@ -16,11 +16,13 @@ class Errors(str, Enum):
     TOKEN_MISSING_PAYLOAD: str = "Token payload missing subject"  # noqa: S105
     PASSWORD_MUST_CONTAIN_SPECIAL_CHARACTER: str = "Password must contain at least one special character"  # noqa: S105
     GITHUB_INTEGRATION_ERROR: str = "GitHub integration error"
+    REDIS_CONNECTION_ERROR: str = "Failed to connect to Redis"
 
 
 class Settings(BaseSettings):
     CLIENT_URL: str = os.getenv("CLIENT_URL")
     PORT: int = int(os.getenv("PORT", "8000"))
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     SECRET_KEY: str = os.getenv("SECRET_KEY")
     ALGORITHM: str = "HS256"

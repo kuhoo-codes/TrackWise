@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,3 +55,13 @@ async def get_user_data(
     email = auth_service.verify_token(token=credentials.credentials)
     user = await auth_service.get_user_by_email(email=email)
     return User.model_validate(user)
+
+
+@router.delete("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> JSONResponse:
+    """Logout user by invalidating the token."""
+    token = credentials.credentials
+    await auth_service.add_to_blacklist(token)

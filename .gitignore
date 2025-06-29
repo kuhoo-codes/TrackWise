@@ -142,3 +142,5 @@ dist
 .ruff_cache
 .venv
 __pycache__
+
+dump.rdb
