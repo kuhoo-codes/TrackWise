@@ -11,65 +11,55 @@ It's ideal as:
 
 ```
 TrackWise/
-├── api/            # Backend (FastAPI)
-└── client/         # Frontend (React + Vite)
+├── api/            # FastAPI backend with PostgreSQL & Redis
+├── client/         # React + Vite frontend
+└── tools/          # Development scripts and utilities
 ```
 
 ## Prerequisites
 
-- Node.js 16 or higher
-- PostgreSQL
+- **Node.js** 16+ 
+- **PostgreSQL** 14+
+- **Redis** 8+
 
 ## Setup
 
-1. To initialize both the backend and frontend environments, run:
+1. Initialize the Project
 ```bash
 sh ./tools/init
 ```
+*This sets up both backend and frontend environments in one command.*
 
-## Backend Setup
+2. Start Development Servers
+```bash
+./tools/run-dev
+```
 
-1. Navigate to the backend directory:
+That's it! Your application will be running at:
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:8000
+- **Redis**: http://localhost:6379
+- **API Documentation**: 
+  - Swagger UI: http://localhost:8000/docs
+  - ReDoc: http://localhost:8000/redoc
+
+## 🔧 Manual Setup (Alternative)
+
+If you prefer to set up components individually:
+
+### Backend Setup
 ```bash
 cd api
+source .venv/bin/activate  # On Windows: .\.venv\Scripts\activate
 ```
 
-2. Activate the virtual environment:
-On macOS/Linux:
-```bash
-source .venv/bin/activate
-```
-
-On Windows:
-```bash
-.\.venv\Scripts\activate
-```
-
-3. Start the FastAPI server:
-```bash
-uvicorn main:app --reload
-```
-
-The backend will be running at http://localhost:8000
-
-API Documentation available at:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-## Frontend Setup
-
-1. Navigate to the frontend directory:
+### Frontend Setup
 ```bash
 cd client
-```
-
-2. Start the development server:
-```bash
+pnpm install
 pnpm run dev
 ```
 
-The frontend will be running at http://localhost:5173
-
 ## Database
 
-The application uses PostgreSQL as its database. Make sure you have PostgreSQL installed and running on your system.
+TrackWise uses PostgreSQL for reliable data storage and Redis for caching. The initialization script handles database setup automatically, but ensure both services are running on your system.
