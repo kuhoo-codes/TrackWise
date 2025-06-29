@@ -1,25 +1,55 @@
 #!/bin/bash
 
-# tools/start-dev
-# Starts both backend and frontend in parallel with logging
+# tools/run-dev
+# Starts backend, frontend, and Redis (if available) with logging
 
 set -e
 
-# Set up log directory
+# Configuration
 LOG_DIR="./logs"
 mkdir -p "$LOG_DIR"
 BACKEND_LOG="$LOG_DIR/api.log"
 FRONTEND_LOG="$LOG_DIR/client.log"
+REDIS_LOG="$LOG_DIR/redis.log"
+REDIS_PORT=6379
+
+# Detect available Redis options
+REDIS_TYPE="none"
+if command -v redis-server &> /dev/null; then
+    REDIS_TYPE="native"
+elif command -v docker &> /dev/null; then
+    REDIS_TYPE="docker"
+fi
 
 # Cleanup function
 cleanup() {
-  echo ""
-  echo "🛑 Stopping all processes..."
-  kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
-  exit 0
+    echo ""
+    echo "🛑 Stopping all processes..."
+    kill $BACKEND_PID $FRONTEND_PID $REDIS_PID 2>/dev/null || true
+    if [ "$REDIS_TYPE" = "docker" ] && [ -n "$DOCKER_REDIS" ]; then
+        docker stop $DOCKER_REDIS >/dev/null
+    fi
+    exit 0
 }
 
 trap cleanup SIGINT SIGTERM
+
+# Start Redis based on available options
+case $REDIS_TYPE in
+    "docker")
+        echo "🐳 Starting Redis with Docker..."
+        DOCKER_REDIS=$(docker run -d -p $REDIS_PORT:6379 redis:alpine 2>&1 | tee "$REDIS_LOG" | sed 's/^/[redis] /')
+        REDIS_PID=$!
+        ;;
+    "native")
+        echo "🛠️  Starting native Redis server..."
+        redis-server --port $REDIS_PORT --save "" --appendonly no 2>&1 | tee "$REDIS_LOG" | sed 's/^/[redis] /' &
+        REDIS_PID=$!
+        ;;
+    *)
+        echo "⚠️  Redis not found (Docker or native). Some features may not work."
+        ;;
+esac
 
 # Start backend
 echo "🚀 Starting FastAPI backend..."
@@ -38,15 +68,18 @@ cd ..
 
 # Info
 echo "-----------------------------------------------"
-echo "Backend (FastAPI) running"
-echo "Frontend (Vite) running"
+echo "Services running:"
+[ "$REDIS_TYPE" != "none" ] && echo "  🔴 Redis ($REDIS_TYPE)"
+echo "  🏗️  Backend (FastAPI)"
+echo "  🎨 Frontend (Vite)"
 echo ""
 echo "Logs:"
+[ "$REDIS_TYPE" != "none" ] && echo "  📄 Redis:    $REDIS_LOG"
 echo "  📄 Backend:  $BACKEND_LOG"
 echo "  📄 Frontend: $FRONTEND_LOG"
 echo "-----------------------------------------------"
-echo "📣 Press Ctrl+C to stop both servers"
+echo "📣 Press Ctrl+C to stop all services"
 echo ""
 
-# Wait until both exit
-wait $BACKEND_PID $FRONTEND_PID
+# Wait until all processes exit
+wait $BACKEND_PID $FRONTEND_PID $REDIS_PID 2>/dev/null || true
