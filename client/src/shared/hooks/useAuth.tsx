@@ -23,7 +23,7 @@ interface AuthContextType extends AuthState {
   isAuthenticated: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
   signup: (userData: SignupRequest) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
   resetAuthState: () => void;
 }
@@ -130,9 +130,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = (): void => {
-    TokenStorage.removeTokens();
-    resetAuthState();
+  const logout = async (): Promise<void> => {
+    try {
+      const token = TokenStorage.getToken();
+      if (token) {
+        await AuthService.logout(token);
+      }
+
+      TokenStorage.removeTokens();
+      resetAuthState();
+    } catch (error) {
+      const normalizedError = handleError(error);
+      throw normalizedError;
+    }
   };
 
   const clearError = (): void => {
