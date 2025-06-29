@@ -29,6 +29,7 @@ dependencies = [
     "httpx>=0.28.1",
     "asyncpg>=0.30.0",
     "greenlet>=3.2.3",
+    "redis>=6.2.0",
 ]
 
 [dependency-groups]
