@@ -104,6 +104,16 @@ export class AuthService {
     }
   }
 
+  static async logout(token: string): Promise<void> {
+    try {
+      await api.delete("/auth/logout", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   static async validateToken(token: string): Promise<User> {
     try {
       const response = await api.get<User>("/auth/me", {

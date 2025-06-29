@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { ButtonComponent } from "../ui/button/button";
 
 export const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const navigate = useNavigate();
 
   const redirectToLogin = () => {
@@ -12,6 +14,17 @@ export const Navbar: React.FC = () => {
   };
   const redirectToSignup = () => {
     void navigate("/signup");
+  };
+
+  const handleLogout = () => {
+    setIsLoggingOut(true);
+    logout()
+      .catch(() => {
+        alert("Logout failed. Please try again.");
+      })
+      .finally(() => {
+        setIsLoggingOut(false);
+      });
   };
 
   return (
@@ -37,8 +50,13 @@ export const Navbar: React.FC = () => {
                     {user?.name}
                   </span>
                 </div>
-                <ButtonComponent variant="secondary" size="sm" onClick={logout}>
-                  Logout
+                <ButtonComponent
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? "Logging out..." : "Logout"}
                 </ButtonComponent>
               </>
             ) : (
