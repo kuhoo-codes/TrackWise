@@ -20,15 +20,15 @@ class Errors(str, Enum):
 
 
 class Settings(BaseSettings):
-    CLIENT_URL: str = os.getenv("CLIENT_URL")
+    CLIENT_URL: str = os.getenv("CLIENT_URL", "http://localhost:5173/")
     PORT: int = int(os.getenv("PORT", "8000"))
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
-    DATABASE_URL: str = os.getenv("DATABASE_URL")
-    SECRET_KEY: str = os.getenv("SECRET_KEY")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://username:password@localhost:5432/database_name")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID")
-    GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET")
+    GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID", "")
+    GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "")
     GITHUB_CALLBACK_URL: str = "http://localhost:{PORT}/integration/github/callback"
     TOKEN_TYPE: str = os.getenv("TOKEN_TYPE", "Bearer")
     MINIMUM_PASSWORD_LENGTH: int = 8
