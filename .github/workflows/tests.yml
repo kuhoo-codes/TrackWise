@@ -12,12 +12,33 @@ on:
 env:
   PYTHON_VERSION: '3.10'
   NODE_VERSION: '23.x'
+  POSTGRES_USER: test_user
+  POSTGRES_PASSWORD: test_password
+  POSTGRES_DB: test_db
+  POSTGRES_HOST: localhost
+  POSTGRES_PORT: 5432
 
 jobs:
   Run-Tests:
     name: Run Tests Job
     environment: dev
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        options: >-
+          --health-cmd="pg_isready"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout TrackWise
         uses: actions/checkout@v4
@@ -31,6 +52,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      - name: Export DATABASE_URL from DB env vars
+        run: |
+          echo "DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}" >> $GITHUB_ENV
 
       - name: Initialize TrackWise
         run: |
