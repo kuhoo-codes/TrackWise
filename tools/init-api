@@ -14,9 +14,9 @@ echo "🔧 Initializing backend environment..."
 # Install uv.
 echo "📦 Installing uv..."
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
-powershell -Command "irm https://astral.sh/uv/0.7.10/install.ps1 | iex"
+  powershell -Command "irm https://astral.sh/uv/0.7.10/install.ps1 | iex"
 else
-curl -LsSf https://astral.sh/uv/0.7.10/install.sh | sh
+  curl -LsSf https://astral.sh/uv/0.7.10/install.sh | sh
 fi
 
 # Resolve script and backend directory
@@ -27,6 +27,8 @@ BACKEND_DIR="$SCRIPT_DIR/../api"
 if cd "$BACKEND_DIR"; then
   echo "🚀 Running 'uv sync' inside $BACKEND_DIR"
   uv sync
+  echo "📂 Running 'alembic upgrade head'..."
+  .venv/bin/alembic upgrade head
 else
   echo "❌ Failed to change directory to $BACKEND_DIR"
   exit 1
@@ -34,3 +36,4 @@ fi
 
 echo ""
 echo "✅ Backend initialization successful!"
+
