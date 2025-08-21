@@ -1,0 +1,70 @@
+import asyncio
+import os
+from collections.abc import AsyncGenerator, Generator
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+
+from alembic import command
+from alembic.config import Config
+from src.db.database import get_db  # <-- Import Base here
+from src.main import app
+
+# Use a file-based SQLite database for testing to ensure persistence
+# across connections within the same test session.
+TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+
+engine = create_async_engine(TEST_DATABASE_URL)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
+
+
+async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with TestingSessionLocal() as session:
+        yield session
+
+
+app.dependency_overrides[get_db] = override_get_db
+
+
+@pytest.fixture(scope="session")
+def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_database() -> Generator[None, None, None]:
+    """
+    Fixture to set up and tear down the test database for the entire session.
+    """
+    # Ensure the old test database is gone before starting
+    if os.path.exists("./test.db"):
+        os.remove("./test.db")
+
+    # Set the environment variable to signal test mode to env.py
+    os.environ["TESTING"] = "1"
+
+    alembic_cfg = Config("alembic.ini")
+    alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
+
+    # Run migrations to create tables
+    command.upgrade(alembic_cfg, "head")
+
+    yield
+
+    # Downgrade the database to clean up
+    command.downgrade(alembic_cfg, "base")
+
+    # Clean up the environment variable and the database file
+    del os.environ["TESTING"]
+    if os.path.exists("./test.db"):
+        os.remove("./test.db")
+
+
+@pytest.fixture(scope="function")
+def client() -> Generator[TestClient, None, None]:
+    with TestClient(app) as c:
+        yield c
