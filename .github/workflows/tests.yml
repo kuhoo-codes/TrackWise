@@ -72,3 +72,9 @@ jobs:
           echo "Running linter..."
           source api/.venv/bin/activate
           bash "$GITHUB_WORKSPACE/tools/lint-api"
+
+      - name: Test Backend
+        run: |
+          echo "Running backend tests..."
+          source api/.venv/bin/activate
+          bash "$GITHUB_WORKSPACE/tools/test-api"

@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# tools/test-api
+# Usage:
+#   ./tools/test-api [pytest_options]
+#
+# Requirements:
+#   - uv and pytest must be installed
+#   - script must have executable permission: chmod +x tools/test-api
+
+set -e
+
+# Directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+API_DIR="$SCRIPT_DIR/../api"
+
+# All arguments passed to this script will be forwarded to pytest
+PYTEST_ARGS=("$@")
+
+# Check for uv
+if ! command -v uv &>/dev/null; then
+  echo "❌ 'uv' is not installed."
+  echo "ℹ️  To set up the environment, run './tools/init-api' or './tools/init'."
+  exit 1
+fi
+
+# Check for pytest
+if ! command -v pytest &>/dev/null; then
+  # Ensure virtual environment is activated
+  if [ -n "$VIRTUAL_ENV" ]; then
+    echo "❌ 'pytest' is not installed."
+    echo "ℹ️  To install it, run './tools/init-api' or './tools/init'."
+  else
+    echo "❌ Virtual environment not detected."
+    echo "👉 Run 'source api/.venv/bin/activate' (Unix-like) or 'api\\.venv\\Scripts\\activate' (Windows)."
+    echo "ℹ️  To initialize the project or recreate the environment, run:"
+    echo "   ./tools/init-api      (for backend only)"
+    echo "   ./tools/init          (for full project setup)"
+  fi
+  exit 1
+fi
+
+echo ""
+echo "🧪 Running backend tests in $API_DIR..."
+echo ""
+
+# Change to the API directory to ensure pytest finds the config and src files
+cd "$API_DIR"
+
+# Run pytest with all forwarded arguments
+if pytest "${PYTEST_ARGS[@]}"; then
+  echo ""
+  echo "✅ Backend tests passed successfully!"
+else
+  echo ""
+  echo "❌ Backend tests failed."
+  exit 1
+fi
