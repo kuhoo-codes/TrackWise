@@ -11,6 +11,7 @@ from alembic import command
 from alembic.config import Config
 from src.db.database import get_db
 from src.main import app
+from tests.test_helpers import AuthHelper
 
 # Use a file-based SQLite database for testing to ensure persistence
 # across connections within the same test session.

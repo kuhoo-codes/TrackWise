@@ -41,3 +41,93 @@ class StateRecord(BaseModel):
     user_id: int
     created_at: datetime
     used: bool = False
+
+
+class UserBase(BaseModel):
+    login: str
+    id: int
+    repos_url: str
+    events_url: str
+    type: str
+
+
+class User(UserBase):
+    name: str | None
+    email: str | None
+
+
+class CommitAuthor(BaseModel):
+    name: str
+    email: str
+    date: datetime
+
+
+class CommitData(BaseModel):
+    message: str
+    author: CommitAuthor | None = None
+
+
+class RepoCommit(BaseModel):
+    sha: str
+    url: str
+    html_url: str
+    author: UserBase | None = None
+    commit: CommitData
+
+
+class CommitStat(BaseModel):
+    additions: int
+    deletions: int
+    total: int
+
+
+class CommitFile(BaseModel):
+    sha: str
+    filename: str
+    status: str
+    additions: int
+    deletions: int
+    changes: int
+    blob_url: str | None
+    raw_url: str | None
+    contents_url: str
+    patch: str | None = None
+
+
+class Commit(RepoCommit):
+    stats: CommitStat
+    files: list[CommitFile]
+
+
+class Repository(BaseModel):
+    id: int
+    fork: bool
+    name: str
+    full_name: str
+    description: str | None
+    html_url: str
+    language: str | None
+    stargazers_count: int
+    forks_count: int
+    fork: bool
+    created_at: datetime
+    updated_at: datetime
+    commits: list[Commit] | None = None
+
+
+class Issue(BaseModel):
+    id: int
+    url: str
+    repository_url: str
+    number: int
+    state: str
+    state_reason: str | None
+    title: str
+    body: str | None
+    html_url: str
+    locked: bool
+    active_lock_reason: str | None
+    closed_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    repository: Repository

@@ -5,7 +5,8 @@ import pytest
 
 from src.exceptions.external import GitHubIntegrationError
 from src.models.integrations import ExternalProfile, PlatformEnum
-from src.schemas.integrations.github import GithubToken
+from src.schemas.integrations.github import GithubToken, RepoCommit, TokenResponse, User
+from src.services.integrations.github_service import GithubService
 
 
 @pytest.fixture
@@ -23,7 +24,7 @@ def mock_external_profile_repo() -> AsyncMock:
 @pytest.fixture
 def github_service(mock_github_repo: AsyncMock, mock_external_profile_repo: AsyncMock) -> GithubService:
     """Fixture for the GitHubService with a mocked repository."""
-    return GitHubService(repo=mock_github_repo)
+    return GithubService(repo=mock_github_repo, external_profile_repo=mock_external_profile_repo)
 
 
 # --- Tests for get_auth_url ---
@@ -189,3 +190,197 @@ async def test_create_external_profile(github_service: GithubService, mock_exter
 
     mock_external_profile_repo.create_external_profile.assert_called_once()
     assert result == "created_profile"
+
+
+@pytest.mark.asyncio
+async def test_update_external_profile_token(
+    github_service: GithubService, mock_external_profile_repo: AsyncMock
+) -> None:
+    """Test that update_external_profile_token updates and saves tokens."""
+    token = GithubToken(
+        access_token="new_token",
+        refresh_token="new_refresh",
+        access_token_expires_at=datetime.now(timezone.utc),
+        refresh_token_expires_at=datetime.now(timezone.utc),
+        token_type="bearer",
+        expires_in=3600,
+        refresh_token_expires_in=7200,
+    )
+    external_profile = ExternalProfile(id=1, user_id=1, platform=PlatformEnum.GITHUB)
+    mock_external_profile_repo.update_external_profile.return_value = "updated_profile"
+
+    result = await github_service.update_external_profile_token(external_profile, token)
+
+    mock_external_profile_repo.update_external_profile.assert_called_once_with(external_profile)
+    assert external_profile.access_token == "new_token"
+    assert result == "updated_profile"
+
+
+@pytest.mark.asyncio
+@patch("src.services.integrations.github_service.httpx.AsyncClient")
+async def test_get_auth_user_success(mock_client: MagicMock, github_service: GithubService) -> None:
+    """Test fetching authenticated GitHub user."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "id": 1,
+        "login": "octocat",
+        "name": "The Octocat",
+        "avatar_url": "avatar",
+        "html_url": "url",
+        "repos_url": "repos",
+        "events_url": "events",
+        "type": "User",
+        "email": "octo@example.com",
+    }
+    mock_response.raise_for_status.return_value = None
+    mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+
+    user = await github_service.get_auth_user("token")
+
+    assert user.login == "octocat"
+    assert user.id == 1
+
+
+@patch("src.services.integrations.github_service.httpx.AsyncClient")
+@pytest.mark.asyncio
+async def test_fetch_author_commits_for_repo(mock_client: MagicMock, github_service: GithubService) -> None:
+    now = datetime.now()
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = [
+        {
+            "sha": "abc",
+            "url": "url1",
+            "html_url": "https://github.com/user/repo/commit/abc",
+            "commit": {
+                "message": "Initial commit",
+                "author": {"name": "octocat", "email": "octocat@example.com", "date": "2025-11-13T00:00:00Z"},
+            },
+        },
+        {
+            "sha": "def",
+            "url": "url2",
+            "html_url": "https://github.com/user/repo/commit/def",
+            "commit": {
+                "message": "Fix bug",
+                "author": {"name": "octocat", "email": "octocat@example.com", "date": "2025-11-13T00:00:00Z"},
+            },
+        },
+    ]
+
+    mock_response.headers = {}
+    mock_response.raise_for_status.return_value = None
+
+    # ✅ create async instance and async mock
+    async_client_instance = mock_client.return_value.__aenter__.return_value
+    async_client_instance.get = AsyncMock(return_value=mock_response)
+
+    # ✅ pass the instance, not the class mock
+    commits = await github_service.fetch_author_commits_for_repo(async_client_instance, "user/repo", "octocat", now)
+
+    assert len(commits) == 2
+
+
+@pytest.mark.asyncio
+@patch("src.services.integrations.github_service.httpx.AsyncClient")
+async def test_get_valid_access_token_refresh_success(
+    mock_client: MagicMock, github_service: GithubService, mock_external_profile_repo: AsyncMock
+) -> None:
+    """Test refreshing an expired access token using refresh token."""
+    valid_refresh = datetime.now(timezone.utc) + timedelta(days=1)
+    external_profile = ExternalProfile(
+        user_id=1,
+        refresh_token="refresh123",
+        refresh_token_expires_at=valid_refresh,
+        platform=PlatformEnum.GITHUB,
+    )
+
+    mock_external_profile_repo.get_external_profile_by_user_id.return_value = external_profile
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "access_token": "new_access",
+        "refresh_token": "new_refresh",
+        "token_type": "bearer",
+        "scope": "repo",
+        "expires_in": 3600,
+        "refresh_token_expires_in": 2592000,
+    }
+    mock_client.return_value.__aenter__.return_value.post.return_value = mock_response
+    mock_external_profile_repo.update_external_profile.return_value = external_profile
+
+    token, profile = await github_service.get_valid_access_token(1)
+
+    assert token == "new_access"
+    assert profile == external_profile
+
+
+@pytest.mark.asyncio
+async def test_get_valid_access_token_missing_profile(
+    github_service: GithubService, mock_external_profile_repo: AsyncMock
+) -> None:
+    """Test error when external profile not found."""
+    mock_external_profile_repo.get_external_profile_by_user_id.return_value = None
+    with pytest.raises(GitHubIntegrationError):
+        await github_service.get_valid_access_token(1)
+
+
+@pytest.mark.asyncio
+async def test_fetch_details_for_commits_with_empty_list(github_service: GithubService) -> None:
+    """Test fetch_details_for_commits handles empty input."""
+    result = await github_service.fetch_details_for_commits(AsyncMock(), [])
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_fetch_with_semaphore_missing_url(github_service: GithubService) -> None:
+    """Test fetch_with_semaphore logs warning and returns None for commits without URLs."""
+    commit = RepoCommit(
+        sha="abc",
+        url="https://api.github.com/repos/test/commits/abc",
+        html_url="https://github.com/test/commit/abc",
+        commit={
+            "message": "Fix bug",
+            "author": {"name": "octocat", "email": "octocat@example.com", "date": "2025-11-13T00:00:00Z"},
+        },
+    )
+    client = AsyncMock()
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "sha": "abc",
+        "url": "https://api.github.com/repos/test/commits/abc",
+        "html_url": "https://github.com/test/commit/abc",
+        "commit": {
+            "message": "Fix bug",
+            "author": {
+                "name": "octocat",
+                "email": "octocat@example.com",
+                "date": "2025-11-13T00:00:00Z",
+            },
+        },
+        "stats": {
+            "total": 10,
+            "additions": 7,
+            "deletions": 3,
+        },
+        "files": [
+            {
+                "sha": "file123",
+                "filename": "main.py",
+                "status": "modified",
+                "additions": 5,
+                "deletions": 2,
+                "changes": 7,
+                "blob_url": "https://github.com/test/commit/abc/blob/main.py",
+                "raw_url": "https://github.com/test/raw/abc/main.py",
+                "contents_url": "https://api.github.com/repos/test/contents/main.py?ref=abc",
+            }
+        ],
+    }
+
+    mock_response.raise_for_status.return_value = None
+
+    client.get.return_value = mock_response
+
+    result = await github_service.fetch_with_semaphore(client, commit)
+    assert result.sha == "abc"
