@@ -16,7 +16,7 @@ from src.exceptions.auth import (
 from src.exceptions.external import ExternalServiceError
 from src.models.users import User
 from src.repositories.user_repository import UserRepository
-from src.schemas.users import UserCreate
+from src.schemas.users import TokenData, UserCreate
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -47,16 +47,17 @@ class AuthService:
         to_encode.update({"exp": expire})
         return jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
 
-    def verify_token(self, token: str) -> str:
+    def verify_token(self, token: str) -> TokenData:
         """Verify and decode JWT token."""
         try:
             if self.is_token_blacklisted(token):
                 raise TokenExpiredError(Errors.TOKEN_EXPIRED.value)
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
             user_id = payload.get("sub")
+            email = payload.get("email")
             if user_id is None:
                 raise InvalidTokenError(Errors.TOKEN_MISSING_PAYLOAD.value, details={"token_payload": payload})
-            return user_id
+            return TokenData(sub=user_id, email=email)
         except jwt.ExpiredSignatureError as e:
             raise TokenExpiredError(Errors.TOKEN_EXPIRED.value) from e
         except JWTError as e:

@@ -25,7 +25,7 @@ async def signup(user: UserCreate, auth_service: Annotated[AuthService, Depends(
     """Sign up a new user."""
     user = await auth_service.create_user(user_data=user)
     access_token = auth_service.create_access_token(
-        data={"sub": user.email},
+        data={"sub": str(user.id), "email": user.email},
     )
     return Token(access_token=access_token, token_type=settings.TOKEN_TYPE, user=User.model_validate(user))
 
@@ -40,7 +40,7 @@ async def login(
 
     # Create access token
     access_token = auth_service.create_access_token(
-        data={"sub": user.email},
+        data={"sub": str(user.id), "email": user.email},
     )
 
     return Token(access_token=access_token, token_type=settings.TOKEN_TYPE, user=User.model_validate(user))
@@ -52,8 +52,8 @@ async def get_user_data(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> User:
     """Login user and return access token."""
-    email = auth_service.verify_token(token=credentials.credentials)
-    user = await auth_service.get_user_by_email(email=email)
+    token_data = auth_service.verify_token(token=credentials.credentials)
+    user = await auth_service.get_user_by_email(email=token_data.email)
     return User.model_validate(user)
 
 

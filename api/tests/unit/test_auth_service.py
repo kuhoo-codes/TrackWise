@@ -37,10 +37,11 @@ def test_verify_password_incorrect(auth_service: AuthService) -> None:
 
 
 def test_create_access_token(auth_service: AuthService) -> None:
-    data = {"sub": "test@example.com"}
+    data = {"sub": "12424", "email": "test@example.com"}
     token = auth_service.create_access_token(data)
     decoded_payload = jwt.decode(token, auth_service.secret_key, algorithms=[auth_service.algorithm])
     assert decoded_payload["sub"] == data["sub"]
+    assert decoded_payload["email"] == data["email"]
     assert "exp" in decoded_payload
 
 
@@ -132,15 +133,17 @@ async def test_authenticate_user_wrong_password(auth_service: AuthService, mock_
 @patch("src.services.auth_service.redis_client")
 def test_verify_token_success(mock_redis: MagicMock, auth_service: AuthService) -> None:
     # --- Setup ---
+    user_id = 63726732
     email = "test@example.com"
     mock_redis.exists.return_value = 0  # Not blacklisted
-    token = auth_service.create_access_token(data={"sub": "test@example.com"})
+    token = auth_service.create_access_token(data={"sub": str(user_id), "email": email})
 
     # --- Execute ---
-    email = auth_service.verify_token(token)
+    data = auth_service.verify_token(token)
 
     # --- Assert ---
-    assert email == "test@example.com"
+    assert data.email == email
+    assert data.sub == user_id
     mock_redis.exists.assert_called_once_with(token)
 
 
