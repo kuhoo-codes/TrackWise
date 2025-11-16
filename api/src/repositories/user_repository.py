@@ -9,11 +9,13 @@ class UserRepository:
         self.db = db
 
     async def get_user_by_email(self, email: str) -> User | None:
+        """Fetch a user by their email address."""
         statement = select(User).filter(User.email == email)
         result = await self.db.execute(statement)
         return result.scalar_one_or_none()
 
     async def create_user(self, user: User) -> User:
+        """Create a new user in the database."""
         self.db.add(user)
         await self.db.commit()
         await self.db.refresh(user)
