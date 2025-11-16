@@ -19,6 +19,14 @@ class Errors(str, Enum):
     REDIS_CONNECTION_ERROR: str = "Failed to connect to Redis"
 
 
+class GithubRoutes(str, Enum):
+    REPOSITORIES: str = "repos"
+    ISSUES: str = "issues"
+    USER: str = "user"
+    USERS: str = "users"
+    COMMITS: str = "commits"
+
+
 class Settings(BaseSettings):
     CLIENT_URL: str = os.getenv("CLIENT_URL", "http://localhost:5173/")
     PORT: int = int(os.getenv("PORT", "8000"))
@@ -30,6 +38,8 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID", "")
     GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "")
     GITHUB_CALLBACK_URL: str = "http://localhost:{PORT}/integration/github/callback"
+    GITHUB_BASE_API_URL: str = "https://api.github.com"
+    GITHUB_PER_PAGE: int = 100
     TOKEN_TYPE: str = os.getenv("TOKEN_TYPE", "Bearer")
     MINIMUM_PASSWORD_LENGTH: int = 8
 

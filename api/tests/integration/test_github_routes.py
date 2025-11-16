@@ -111,3 +111,63 @@ def test_github_auth_flow(
     assert token_set_call[1]["ex"] == 288000
     assert json.loads(token_set_call[0][1])["access_token"] == "gho_12345_test_token"
 
+
+@patch("httpx.AsyncClient.get")
+@patch("httpx.AsyncClient.post")
+def test_start_github_sync_success(
+    mock_httpx_post: AsyncMock,
+    mock_httpx_get: AsyncMock,
+    client: TestClient,
+    auth_helper: AuthHelper,
+) -> None:
+    """Test starting GitHub sync successfully."""
+
+    # --- Setup Mock for POST (for token refresh) ---
+    mock_token_api_response = MagicMock()
+    mock_token_api_response.status_code = 200
+    mock_token_api_response.json.return_value = {
+        "access_token": "gho_12345_test_token",
+        "token_type": "bearer",
+        "scope": "repo,user",
+        "expires_in": 288000,
+        "refresh_token": "ghr_67890_test_refresh_token",
+        "refresh_token_expires_in": 16070400,
+    }
+    mock_httpx_post.return_value = mock_token_api_response
+
+    # --- Setup Mock for GET (for all sync calls) ---
+    mock_sync_api_response = MagicMock()
+    mock_sync_api_response.status_code = 200
+    # Return an empty list to satisfy repos, issues, etc.
+    mock_sync_api_response.json.return_value = []
+    mock_sync_api_response.raise_for_status = MagicMock()
+    mock_httpx_get.return_value = mock_sync_api_response
+
+    # --- Run Test ---
+    appa_headers = auth_helper.get_auth_headers("appa")
+    response = client.get("/integrations/github/sync", headers=appa_headers)
+    data = response.json()
+
+    # --- Assert ---
+    assert response.status_code == 200
+    assert "GitHub synchronization has been started" in data["message"]
+    mock_httpx_get.assert_called()
+
+
+def test_start_github_sync_failure(
+    client: TestClient,
+    auth_helper: AuthHelper,
+) -> None:
+    """Test starting GitHub sync successfully."""
+
+    # --- Run Test ---
+    appa_headers = auth_helper.get_auth_headers("momo")
+    response = client.get("/integrations/github/sync", headers=appa_headers)
+    data = response.json()
+
+    # --- Assert ---
+    assert response.status_code == 502
+    assert "error" in data
+    assert data["error"]["code"] == "GITHUB_INTEGRATION_ERROR"
+    assert data["error"]["message"] == "GitHub integration error"
+    assert data["error"]["details"] == {"error": "GitHub external profile not found"}
