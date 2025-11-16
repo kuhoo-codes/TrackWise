@@ -55,7 +55,7 @@ esac
 echo "🚀 Starting FastAPI backend..."
 cd api
 source .venv/bin/activate
-uvicorn src.main:app --reload 2>&1 | tee "$BACKEND_LOG" | sed 's/^/[backend] /' &
+PYTHONUNBUFFERED=1 uvicorn src.main:app --reload 2>&1 | tee "$BACKEND_LOG" | sed -u 's/^/[backend] /' &
 BACKEND_PID=$!
 cd ..
 
