@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 
 from alembic import command
 from alembic.config import Config
-from src.db.database import get_db  # <-- Import Base here
+from src.db.database import get_db
 from src.main import app
 
 # Use a file-based SQLite database for testing to ensure persistence
@@ -47,6 +47,19 @@ def setup_test_database() -> Generator[None, None, None]:
     # Set the environment variable to signal test mode to env.py
     os.environ["TESTING"] = "1"
 
+    from sqlalchemy import JSON
+    from sqlalchemy.dialects import postgresql
+
+    class SQLiteJSON(JSON):
+        """SQLite-compatible mock for PostgreSQL's JSONB type."""
+
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            # Ignore any PostgreSQL-specific kwargs like astext_type
+            kwargs.pop("astext_type", None)
+            super().__init__(*args, **kwargs)
+
+    postgresql.JSONB = SQLiteJSON
+
     alembic_cfg = Config("alembic.ini")
     alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
 
@@ -56,7 +69,6 @@ def setup_test_database() -> Generator[None, None, None]:
     yield
 
     # Downgrade the database to clean up
-    command.downgrade(alembic_cfg, "base")
 
     # Clean up the environment variable and the database file
     del os.environ["TESTING"]
