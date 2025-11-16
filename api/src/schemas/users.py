@@ -51,3 +51,8 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: User | None = None
+
+
+class TokenData(BaseModel):
+    sub: int
+    email: str
