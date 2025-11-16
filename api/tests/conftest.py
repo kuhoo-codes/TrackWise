@@ -76,7 +76,18 @@ def setup_test_database() -> Generator[None, None, None]:
         os.remove("./test.db")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def client() -> Generator[TestClient, None, None]:
     with TestClient(app) as c:
         yield c
+
+
+@pytest.fixture(scope="session")
+def auth_helper(client: TestClient) -> AuthHelper:
+    """
+    Provides a session-scoped AuthHelper instance with
+    predefined users.
+    """
+    helper = AuthHelper(client)
+    helper.setup_predefined_users()
+    return helper
