@@ -38,7 +38,6 @@ async def login(
     """Login user and return access token."""
     user = await auth_service.authenticate_user(email=user_credentials.email, password=user_credentials.password)
 
-    # Create access token
     access_token = auth_service.create_access_token(
         data={"sub": str(user.id), "email": user.email},
     )
