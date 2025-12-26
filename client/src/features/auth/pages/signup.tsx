@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ROUTES } from "@/app/router/routes";
 import { AuthForm } from "@/features/auth/components/authForm";
 import { AuthSidePanel } from "@/features/auth/pages/authSidePanel";
-import type { SignupRequest } from "@/services/auth";
+import type { SignupRequest } from "@/services/types";
 import { useAuth } from "@/shared/hooks/useAuth";
 
 export const Signup: React.FC = () => {

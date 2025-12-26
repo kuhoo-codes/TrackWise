@@ -194,4 +194,27 @@ export default [
       ],
     },
   },
+  {
+    files: [
+      "src/services/apiTypes.ts",
+      "src/services/adapters.ts",
+    ],
+    rules: {
+      "@typescript-eslint/naming-convention": [
+        "error",
+        {
+          selector: "default",
+          format: ["camelCase"],
+        },
+        {
+          selector: ["objectLiteralProperty", "typeProperty"],
+          format: ["camelCase", "snake_case"],
+        },
+        {
+          selector: "typeLike",
+          format: ["PascalCase"],
+        },
+      ],
+    },
+  },
 ];
