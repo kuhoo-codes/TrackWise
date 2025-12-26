@@ -17,6 +17,10 @@ class Errors(str, Enum):
     PASSWORD_MUST_CONTAIN_SPECIAL_CHARACTER: str = "Password must contain at least one special character"  # noqa: S105
     GITHUB_INTEGRATION_ERROR: str = "GitHub integration error"
     REDIS_CONNECTION_ERROR: str = "Failed to connect to Redis"
+    TIMELINE_NOT_FOUND: str = "Timeline not found"
+    TIMELINE_NODE_NOT_FOUND: str = "Timeline node not found"
+    INVALID_TIMELINE_NODE_HIERARCHY: str = "Invalid timeline node hierarchy"
+    INVALID_TIMELINE_NODE: str = "Invalid timeline node data"
 
 
 class GithubRoutes(str, Enum):
