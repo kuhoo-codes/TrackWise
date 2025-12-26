@@ -1,39 +1,14 @@
 import Axios, { type AxiosError } from "axios";
-import { z } from "zod";
+import { adaptAuthResponse, adaptUser } from "@/services/adapters";
 import { api } from "@/services/api";
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  lastLogin: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface SignupRequest extends LoginRequest {
-  name: string;
-}
-
-export interface AuthResponse {
-  user: User;
-  accessToken: string;
-  tokenType: string;
-}
-
-const APIErrorSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  timestamp: z.coerce.date().optional(),
-  details: z.record(z.any()).optional(),
-});
-
-export type APIError = z.infer<typeof APIErrorSchema>;
+import type {
+  User,
+  LoginRequest,
+  AuthResponse,
+  SignupRequest,
+  APIError,
+} from "@/services/types";
+import { APIErrorSchema } from "@/services/types";
 
 export class AuthService {
   private static handleError(error: unknown): APIError {
@@ -77,13 +52,7 @@ export class AuthService {
   static async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
       const response = await api.post("/auth/login", credentials);
-      const data = response.data;
-      const authData: AuthResponse = {
-        user: data.user,
-        accessToken: data.access_token,
-        tokenType: data.token_type,
-      };
-      return authData;
+      return adaptAuthResponse(response.data);
     } catch (error) {
       throw this.handleError(error);
     }
@@ -92,41 +61,31 @@ export class AuthService {
   static async signup(userData: SignupRequest): Promise<AuthResponse> {
     try {
       const response = await api.post("/auth/signup", userData);
-      const data = response.data;
-      const authData: AuthResponse = {
-        user: data.user,
-        accessToken: data.access_token,
-        tokenType: data.token_type,
-      };
-      return authData;
+      return adaptAuthResponse(response.data);
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
-  static async logout(token: string): Promise<void> {
+  static async logout(): Promise<void> {
     try {
-      await api.delete("/auth/logout", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete("/auth/logout", {});
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
-  static async validateToken(token: string): Promise<User> {
+  static async validateToken(): Promise<User> {
     try {
-      const response = await api.get<User>("/auth/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
+      const response = await api.get("/auth/me", {});
+      return adaptUser(response.data);
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
   static async refreshToken(): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>("/auth/refresh");
-    return response.data;
+    const response = await api.post("/auth/refresh");
+    return adaptAuthResponse(response.data);
   }
 }

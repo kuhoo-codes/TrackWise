@@ -12,7 +12,7 @@ import {
   type LoginRequest,
   type SignupRequest,
   type APIError,
-} from "@/services/auth";
+} from "@/services/types";
 
 interface AuthState {
   user: User | null;
@@ -26,6 +26,7 @@ interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   clearError: () => void;
   resetAuthState: () => void;
+  token?: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const token = TokenStorage.getToken();
         if (token) {
-          const userData = await AuthService.validateToken(token);
+          const userData = await AuthService.validateToken();
           setState((prev) => ({ ...prev, user: userData }));
         } else {
           resetAuthState();
@@ -87,7 +88,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       const response = await AuthService.login(credentials);
-
       TokenStorage.setToken(response.accessToken);
 
       setState({
@@ -134,7 +134,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const token = TokenStorage.getToken();
       if (token) {
-        await AuthService.logout(token);
+        await AuthService.logout();
       }
 
       TokenStorage.removeTokens();
@@ -162,6 +162,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     clearError,
     resetAuthState,
+    token: state.user ? TokenStorage.getToken() : null,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
