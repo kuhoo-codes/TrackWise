@@ -20,7 +20,7 @@ from src.core.exception_handlers import (
 )
 from src.core.logging_config import setup_logging
 from src.exceptions.base import BaseCustomException
-from src.routes import auth
+from src.routes import auth, timeline
 from src.routes.integrations import github
 
 setup_logging()
@@ -71,6 +71,7 @@ app.add_exception_handler(Exception, generic_exception_handler)
 
 app.include_router(auth.router)
 app.include_router(github.router)
+app.include_router(timeline.router)
 
 
 @app.get("/")
