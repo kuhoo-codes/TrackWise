@@ -1,8 +1,8 @@
 import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
+import { Login, Signup } from "@/features/auth";
 import { Dashboard } from "@/features/dashboard";
-import { Login, Signup } from "../../features/auth";
-import { Layout } from "../../shared/components/layout/layout";
+import { Layout } from "@/shared/components/layout/layout";
 import { ProtectedRoute } from "./protectedRoute";
 import { ROUTES } from "./routes";
 

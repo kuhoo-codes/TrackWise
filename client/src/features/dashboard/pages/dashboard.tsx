@@ -1,5 +1,5 @@
 import React from "react";
-import { useAuth } from "../../../shared/hooks/useAuth";
+import { useAuth } from "@/shared/hooks/useAuth";
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();

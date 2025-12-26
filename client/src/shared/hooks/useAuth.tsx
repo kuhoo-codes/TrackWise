@@ -5,14 +5,14 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { AuthService } from "@/services/auth";
+import { TokenStorage } from "@/services/tokenStorage";
 import {
-  AuthService,
   type User,
   type LoginRequest,
   type SignupRequest,
   type APIError,
-} from "../../services/auth";
-import { TokenStorage } from "../../services/tokenStorage";
+} from "@/services/auth";
 
 interface AuthState {
   user: User | null;

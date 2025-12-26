@@ -1,10 +1,10 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ROUTES } from "../../../app/router/routes";
-import type { SignupRequest } from "../../../services/auth";
-import { useAuth } from "../../../shared/hooks/useAuth";
-import { AuthForm } from "../components/authForm";
-import { AuthSidePanel } from "./authSidePanel";
+import { ROUTES } from "@/app/router/routes";
+import { AuthForm } from "@/features/auth/components/authForm";
+import { AuthSidePanel } from "@/features/auth/pages/authSidePanel";
+import type { SignupRequest } from "@/services/auth";
+import { useAuth } from "@/shared/hooks/useAuth";
 
 export const Signup: React.FC = () => {
   const { signup, isLoading, clearError, error } = useAuth();
