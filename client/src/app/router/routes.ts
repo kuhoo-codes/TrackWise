@@ -6,6 +6,7 @@ export const ROUTES = {
 
   // Protected routes
   DASHBOARD: "/dashboard",
+  TIMELINE: "/timeline",
 
   // Error routes
   NOT_FOUND: "/404",

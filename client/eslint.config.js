@@ -61,6 +61,7 @@ export default [
     rules: {
       // React rules
       "react/no-unescaped-entities": "off",
+      "react/prop-types": "off",
       "react/jsx-uses-react": "error",
       "react/jsx-uses-vars": "error",
       "react/react-in-jsx-scope": "off",
@@ -136,16 +137,16 @@ export default [
           format: ["camelCase"],
           leadingUnderscore: "allow",
           filter: {
-            regex: "^(Content-Type|Accept|Authorization|X-.*)$",
+            regex: "^(--.*|Content-Type|Accept|Authorization|X-.*)$",
             match: false,
           },
         },
         {
-          selector: "objectLiteralProperty",
+          selector: ["objectLiteralProperty", "typeProperty"],
           format: ["camelCase", "UPPER_CASE"],
           leadingUnderscore: "allow",
           filter: {
-            regex: "^(Content-Type|Accept|Authorization|X-.*)$",
+            regex: "^(--.*|Content-Type|Accept|Authorization|X-.*)$",
             match: false,
           },
         },
@@ -198,6 +199,7 @@ export default [
     files: [
       "src/services/apiTypes.ts",
       "src/services/adapters.ts",
+      "src/features/timeline/components/types.ts",
     ],
     rules: {
       "@typescript-eslint/naming-convention": [
