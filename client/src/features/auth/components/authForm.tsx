@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import type { LoginRequest, SignupRequest } from "@/services/auth";
+import { ROUTES } from "@/app/router/routes";
 import { MINIMUM_PASSWORD_LENGTH } from "@/services/config";
-import { ROUTES } from "../../../app/router/routes";
-import { ButtonComponent } from "../../../shared/components/ui/button/button";
-import { InputField } from "../../../shared/components/ui/form/inputField";
+import type { LoginRequest, SignupRequest } from "@/services/types";
+import { ButtonComponent } from "@/shared/components/ui/button/button";
+import { InputField } from "@/shared/components/ui/form/inputField";
 
 interface AuthFormProps<T extends "login" | "signup"> {
   mode: T;

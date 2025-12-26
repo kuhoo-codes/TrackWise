@@ -1,10 +1,10 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { ROUTES } from "@/app/router/routes";
+import { AuthForm } from "@/features/auth/components/authForm";
+import { AuthSidePanel } from "@/features/auth/pages/authSidePanel";
 import type { LoginRequest } from "@/services/auth";
-import { ROUTES } from "../../../app/router/routes";
-import { useAuth } from "../../../shared/hooks/useAuth";
-import { AuthForm } from "../components/authForm";
-import { AuthSidePanel } from "./authSidePanel";
+import { useAuth } from "@/shared/hooks/useAuth";
 
 export const Login: React.FC = () => {
   const { login, isLoading, clearError, error } = useAuth();
@@ -13,9 +13,7 @@ export const Login: React.FC = () => {
 
   const handleLogin = async (data: LoginRequest) => {
     clearError();
-
     await login(data);
-
     const from = location.state?.from?.pathname || ROUTES.DASHBOARD;
     void navigate(from, { replace: true });
   };

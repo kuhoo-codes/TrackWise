@@ -1,6 +1,6 @@
 import Axios, { type AxiosError } from "axios";
 import { z } from "zod";
-import { api } from "./api";
+import { api } from "@/services/api";
 
 export interface User {
   id: string;

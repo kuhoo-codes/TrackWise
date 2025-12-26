@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
-import { ButtonComponent } from "../ui/button/button";
+import { ButtonComponent } from "@/shared/components/ui/button/button";
+import { useAuth } from "@/shared/hooks/useAuth";
 
 export const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
