@@ -1,4 +1,3 @@
-import asyncio
 import os
 from collections.abc import AsyncGenerator, Generator
 
@@ -18,7 +17,13 @@ from tests.test_helpers import AuthHelper
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
 engine = create_async_engine(TEST_DATABASE_URL)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
+TestingSessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
 
 
 async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -27,13 +32,6 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 app.dependency_overrides[get_db] = override_get_db
-
-
-@pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest.fixture(scope="session", autouse=True)
