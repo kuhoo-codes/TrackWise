@@ -100,7 +100,7 @@ class TimelineService:
         self._validate_dates(timeline_node)
 
         if timeline_node.parent_id:
-            self._validate_parent_hierarchy(timeline_node.parent_id, timeline_node, timeline_node.timeline_id)
+            await self._validate_parent_hierarchy(timeline_node.parent_id, timeline_node, timeline_node.timeline_id)
 
         timeline_node_db = TimelineNode(
             timeline_id=timeline_node.timeline_id,
@@ -130,7 +130,7 @@ class TimelineService:
         self._validate_dates(timeline_node)
 
         if timeline_node.parent_id:
-            self._validate_parent_hierarchy(timeline_node.parent_id, timeline_node, existing_node.timeline_id)
+            await self._validate_parent_hierarchy(timeline_node.parent_id, timeline_node, existing_node.timeline_id)
 
         existing_node.title = timeline_node.title
         existing_node.short_summary = timeline_node.short_summary
@@ -157,7 +157,7 @@ class TimelineService:
         await self.timeline_repo.delete_timeline_node(node_id)
 
     # Helper Validation Methods
-    async def _validate_dates(self, timeline_node: TimelineNodeCreate | TimelineNodeBase) -> None:
+    def _validate_dates(self, timeline_node: TimelineNodeCreate | TimelineNodeBase) -> None:
         """Validates the start and end dates based on whether the node is current."""
         is_current = timeline_node.is_current
         start_date = timeline_node.start_date
