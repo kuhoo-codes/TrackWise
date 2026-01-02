@@ -19,7 +19,7 @@ export const Dashboard: React.FC = () => {
   const [timelineToDelete, setTimelineToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchTimelines = async () => {
+  const fetchTimelines = React.useCallback(async () => {
     if (!token) return;
     try {
       const data = await TimelineService.getTimelines();
@@ -29,11 +29,11 @@ export const Dashboard: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     void fetchTimelines();
-  }, [token]);
+  }, [fetchTimelines]);
 
   const handleCreateTimeline = async (data: CreateTimelineFormValues) => {
     if (!token) return;
