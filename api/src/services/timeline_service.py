@@ -150,8 +150,10 @@ class TimelineService:
     async def delete_timeline_node(self, node_id: int, user_id: int) -> None:
         """Delete a timeline node"""
         existing_node = await self.timeline_repo.get_timeline_node_lite(node_id)
+        if not existing_node:
+            raise TimelineNodeNotFoundError(Errors.TIMELINE_NODE_NOT_FOUND.value, details={"node_id": node_id})
         timeline = await self.timeline_repo.get_timeline_by_id(existing_node.timeline_id, user_id)
-        if not existing_node or not timeline:
+        if not timeline:
             raise TimelineNodeNotFoundError(Errors.TIMELINE_NODE_NOT_FOUND.value, details={"node_id": node_id})
 
         await self.timeline_repo.delete_timeline_node(node_id)
