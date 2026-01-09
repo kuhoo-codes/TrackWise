@@ -6,6 +6,24 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+let _canvas: HTMLCanvasElement | undefined;
+
+export function getTextWidth(
+  text: string,
+  font = "bold 14px ui-sans-serif, system-ui, sans-serif",
+) {
+  if (typeof document === "undefined") return 0; // SSR safety
+
+  if (!_canvas) {
+    _canvas = document.createElement("canvas");
+  }
+  const context = _canvas.getContext("2d");
+  if (!context) return 0;
+
+  context.font = font;
+  return context.measureText(text).width;
+}
+
 export const LANE_HEIGHT = 150;
 export const LANE_GAP = 20;
 
