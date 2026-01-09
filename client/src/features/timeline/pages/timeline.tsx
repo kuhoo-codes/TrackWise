@@ -1,5 +1,5 @@
 import { addYears } from "date-fns/addYears";
-import { Plus, Minus } from "lucide-react";
+import { Plus, Minus, ArrowLeft } from "lucide-react";
 import React, {
   useEffect,
   useLayoutEffect,
@@ -7,6 +7,8 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { Link } from "react-router-dom";
+import { ROUTES } from "@/app/router/routes";
 import { TimeAxis } from "@/features/timeline/components/timeAxis";
 import { TimelineBlock } from "@/features/timeline/components/timelineBlock";
 import { TimelineNodeModal } from "@/features/timeline/components/timelineNodeModal";
@@ -28,13 +30,26 @@ interface TimelineProps {
   timelineId: number;
 }
 
+const DEFAULT_NODE_STATE: TimelineNodeFormValues = {
+  id: null,
+  title: "",
+  type: "work",
+  parentId: null,
+  startDate: new Date(),
+  endDate: null,
+  isCurrent: false,
+  shortSummary: "",
+  description: "",
+  privateNotes: "",
+  media: [],
+};
+
 export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [scale, setScale] = useState(DEFAULT_SCALE);
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [modalInitialData, setModalInitialData] = useState<
-    Partial<TimelineNodeFormValues> & { id?: number }
-  >({});
+  const [modalInitialData, setModalInitialData] =
+    useState<TimelineNodeFormValues>({ ...DEFAULT_NODE_STATE });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const hasInitializedScroll = useRef(false);
@@ -55,8 +70,9 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
     [nodes],
   );
 
-  const handleOpenAddModal = (parentId = 0) => {
+  const handleOpenAddModal = (parentId: number | null = null) => {
     setModalInitialData({
+      ...DEFAULT_NODE_STATE,
       parentId,
     });
     setIsModalOpen(true);
@@ -80,7 +96,7 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
 
   const handleBackgroundClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      handleOpenAddModal(0);
+      handleOpenAddModal();
     }
   };
 
@@ -265,20 +281,43 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
     () =>
       uiItems
         .filter((i) => !i.parentId)
-        .map((i) => ({ id: i.id, title: i.title })),
-    [uiItems],
+        .filter((i) => i.id !== modalInitialData.id),
+    [uiItems, modalInitialData.id],
   );
 
   const containerWidth = getXPosition(viewStartDate, viewEndDate, scale);
   const maxLaneIndex = Math.max(...itemsWithLanes.map((i) => i.laneIndex), 0);
   const containerHeight = (maxLaneIndex + 1) * (LANE_HEIGHT + LANE_GAP) + 100;
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading && nodes.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-500">
+        Loading timeline...
+      </div>
+    );
+  }
   if (error) return <div>Error: {error}</div>;
 
   // --- RENDER ---
   return (
     <div className="w-full h-screen flex flex-col bg-gray-50 overflow-hidden">
+      <Link
+        to={ROUTES.DASHBOARD}
+        className="
+          flex items-center gap-2 
+          w-max
+          mx-4 my-2
+          px-4 py-2 
+          bg-white/90 backdrop-blur-sm 
+          border border-gray-200 rounded-lg shadow-sm 
+          text-sm font-medium text-gray-700 
+          hover:bg-gray-50 hover:text-gray-900 hover:shadow-md 
+          transition-all duration-200
+        "
+      >
+        <ArrowLeft size={16} />
+        <span>Dashboard</span>
+      </Link>
       {/* --- ZOOM CONTROLS UI --- */}
       <div className="absolute bottom-8 right-8 z-50 flex flex-col gap-2 shadow-xl rounded-lg bg-white p-1 border border-gray-200">
         <button

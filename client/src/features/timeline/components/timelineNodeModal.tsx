@@ -15,14 +15,15 @@ import {
   timelineNodeSchema,
   type TimelineNodeFormValues,
 } from "@/features/timeline/components/types";
+import { NODE_TYPES, type TimelineNode } from "@/services/types";
 
 interface NodeModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: TimelineNodeFormValues) => Promise<void>;
   onDelete?: (id: number) => void;
-  availableParents?: { id: number; title: string }[];
-  initialData?: Partial<TimelineNodeFormValues> & { id?: number };
+  availableParents: TimelineNode[];
+  initialData: TimelineNodeFormValues;
   timelineId: number;
 }
 
@@ -49,47 +50,29 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
   >("essentials");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const isEditing = !!initialData?.id;
-
-  const defaultState = React.useMemo<Partial<TimelineNodeFormValues>>(
-    () => ({
-      title: "",
-      type: "work",
-      parentId: 0,
-      isCurrent: false,
-      shortSummary: "",
-      description: "",
-      privateNotes: "",
-      media: [],
-      startDate: new Date(),
-    }),
-    [],
-  );
-
-  const NODE_TYPE_OPTIONS: {
-    id: TimelineNodeFormValues["type"];
-    icon: LucideIcon;
-    label: string;
-  }[] = [
-    { id: "work", icon: Briefcase, label: "Work" },
-    { id: "education", icon: GraduationCap, label: "Education" },
-    { id: "project", icon: Code, label: "Project" },
-    { id: "certification", icon: Award, label: "Cert" },
-    { id: "blog", icon: Code, label: "Blog" },
-    { id: "milestone", icon: Award, label: "Milestone" },
-  ];
-
-  const [formData, setFormData] =
-    useState<Partial<TimelineNodeFormValues>>(defaultState);
+  const [formData, setFormData] = useState<TimelineNodeFormValues>(initialData);
 
   useEffect(() => {
     if (isOpen) {
       setErrors({});
-      setFormData({ ...defaultState, ...initialData });
+      setFormData({ ...initialData });
       setActiveTab("essentials");
     }
-  }, [isOpen, initialData, defaultState]);
+  }, [isOpen, initialData]);
+
+  const isEditing = !!initialData.id;
+
+  const NODE_TYPE_OPTIONS: {
+    id: TimelineNodeFormValues["type"];
+    icon: LucideIcon;
+  }[] = [
+    { id: NODE_TYPES.WORK, icon: Briefcase },
+    { id: NODE_TYPES.EDUCATION, icon: GraduationCap },
+    { id: NODE_TYPES.PROJECT, icon: Code },
+    { id: NODE_TYPES.CERTIFICATION, icon: Award },
+    { id: NODE_TYPES.BLOG, icon: Code },
+    { id: NODE_TYPES.MILESTONE, icon: Award },
+  ];
 
   const handleChange = <K extends keyof TimelineNodeFormValues>(
     field: K,
@@ -111,18 +94,16 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
     setIsSubmitting(true);
     setErrors({});
 
-    const result = timelineNodeSchema.safeParse(formData);
+    const parentId = formData.parentId ? Number(formData.parentId) : null;
 
-    if (!result.success) {
-      const newErrors: Record<string, string> = {};
-      result.error.errors.forEach((err) => {
-        const path = err.path[0] as string;
-        newErrors[path] = err.message;
-      });
-      setErrors(newErrors);
+    const parentNode = availableParents.find((n) => n.id === parentId);
+
+    const validation = validateNode(formData, parentNode);
+    if (!validation.success) {
+      setErrors(validation.errors);
       setIsSubmitting(false);
 
-      if (newErrors.shortSummary || newErrors.description) {
+      if (validation.errors.shortSummary || validation.errors.description) {
         setActiveTab("details");
       } else {
         setActiveTab("essentials");
@@ -131,12 +112,69 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
     }
 
     try {
-      await onSubmit(result.data as TimelineNodeFormValues);
+      await onSubmit(validation.data!);
     } catch (error) {
       console.error("Submit error", error);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const validateNode = (
+    rawFormData: Partial<TimelineNodeFormValues>,
+    parentNode?: TimelineNode,
+  ): {
+    success: boolean;
+    errors: Record<string, string>;
+    data?: TimelineNodeFormValues;
+  } => {
+    const errors: Record<string, string> = {};
+
+    const result = timelineNodeSchema.safeParse(rawFormData);
+
+    if (!result.success) {
+      result.error.errors.forEach((err) => {
+        const path = err.path[0] as string;
+        errors[path] = err.message;
+      });
+      return { success: false, errors };
+    }
+
+    const childNode = result.data as TimelineNodeFormValues;
+
+    if (parentNode) {
+      const parentStart = new Date(parentNode.startDate);
+      const childStart = new Date(childNode.startDate);
+
+      if (childStart < parentStart) {
+        errors.startDate = `Child cannot start before parent (${formatDateForInput(parentStart)})`;
+      }
+
+      if (!parentNode.isCurrent) {
+        const parentEnd = parentNode.endDate
+          ? new Date(parentNode.endDate)
+          : null;
+        const childEnd = childNode.endDate ? new Date(childNode.endDate) : null;
+
+        if (!parentStart || !parentEnd) {
+          errors.parentId = "Selected parent block has invalid dates";
+        } else {
+          if (childNode.isCurrent) {
+            errors.isCurrent =
+              "Child cannot be 'Ongoing' if parent has a fixed end date";
+          }
+          if (!childNode.isCurrent && childEnd && childEnd > parentEnd) {
+            errors.endDate = `Child cannot end after parent (${formatDateForInput(parentEnd)})`;
+          }
+        }
+      }
+    }
+
+    return {
+      success: Object.keys(errors).length === 0,
+      errors,
+      data: childNode,
+    };
   };
 
   return (
@@ -204,9 +242,7 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
                         `}
                       >
                         <type.icon className="w-5 h-5 mb-1" />
-                        <span className="text-xs font-medium">
-                          {type.label}
-                        </span>
+                        <span className="text-xs font-medium">{type.id}</span>
                       </div>
                     ))}
                   </div>
@@ -280,6 +316,11 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
                     Leave empty to create a new main timeline block. Select a
                     block to add this as a child event.
                   </p>
+                  {errors.parentId && (
+                    <span className="text-red-500 text-xs block">
+                      {errors.parentId}
+                    </span>
+                  )}
                 </div>
 
                 {/* Date Inputs */}
@@ -300,7 +341,9 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
                           handleChange("startDate", e.target.valueAsDate);
                         }
                       }}
-                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none"
+                      className={`w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none ${
+                        errors.startDate ? "border-red-500" : "border-gray-300"
+                      }`}
                     />
                     {errors.startDate && (
                       <span className="text-red-500 text-xs">
@@ -325,7 +368,9 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
                       onChange={(e) => {
                         handleChange("endDate", e.target.valueAsDate);
                       }}
-                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none"
+                      className={`w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none ${
+                        errors.endDate ? "border-red-500" : "border-gray-300"
+                      }`}
                     />
                     {errors.endDate && (
                       <span className="text-red-500 text-xs">
@@ -336,22 +381,29 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
                 </div>
 
                 {/* Is Current Checkbox */}
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="isCurrent"
-                    checked={formData.isCurrent}
-                    onChange={(e) =>
-                      handleChange("isCurrent", e.target.checked)
-                    }
-                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
-                  />
-                  <Label.Root
-                    htmlFor="isCurrent"
-                    className="text-sm text-gray-700 cursor-pointer select-none"
-                  >
-                    I am currently working on this
-                  </Label.Root>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="isCurrent"
+                      checked={formData.isCurrent}
+                      onChange={(e) =>
+                        handleChange("isCurrent", e.target.checked)
+                      }
+                      className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <Label.Root
+                      htmlFor="isCurrent"
+                      className="text-sm text-gray-700 cursor-pointer select-none"
+                    >
+                      I am currently working on this
+                    </Label.Root>
+                  </div>
+                  {errors.isCurrent && (
+                    <span className="text-red-500 text-xs ml-6 block">
+                      {errors.isCurrent}
+                    </span>
+                  )}
                 </div>
               </div>
             )}

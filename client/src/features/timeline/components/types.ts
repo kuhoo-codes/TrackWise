@@ -4,13 +4,13 @@ import { NodeTypeSchema } from "@/services/types";
 export const timelineNodeSchema = z
   .object({
     title: z.string().min(1, "Title is required").max(100, "Title is too long"),
-
+    id: z.number().nullable(),
     type: NodeTypeSchema,
 
     parentId: z
       .union([z.string(), z.number(), z.null()])
       .transform((val) => {
-        if (val === "" || val === "0" || val === 0) return null; // "0" means Top Level
+        if (val === "" || val === "0" || val === 0 || val === null) return null;
         return Number(val);
       })
       .optional(),
@@ -22,9 +22,9 @@ export const timelineNodeSchema = z
     endDate: z.coerce.date().nullable().optional(),
     isCurrent: z.boolean().default(false),
 
-    shortSummary: z.string().optional().or(z.literal("")),
-    description: z.string().optional().or(z.literal("")),
-    privateNotes: z.string().optional().or(z.literal("")),
+    shortSummary: z.string().nullable().optional().or(z.literal("")),
+    description: z.string().nullable().optional().or(z.literal("")),
+    privateNotes: z.string().nullable().optional().or(z.literal("")),
 
     media: z.array(z.any()).optional(),
   })
