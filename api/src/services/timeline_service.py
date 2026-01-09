@@ -132,6 +132,15 @@ class TimelineService:
 
         self._validate_dates(timeline_node)
 
+        if timeline_node.parent_id == node_id:
+            raise InvalidTimelineNodeError(
+                Errors.INVALID_TIMELINE_NODE_HIERARCHY.value,
+                details={
+                    "parent_id": timeline_node.parent_id,
+                    "reason": "A node can not be its own parent",
+                },
+            )
+
         if timeline_node.parent_id:
             await self._validate_parent_hierarchy(timeline_node.parent_id, timeline_node, existing_node.timeline_id)
 
