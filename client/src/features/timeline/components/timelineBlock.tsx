@@ -1,5 +1,7 @@
 import React from "react";
+import { useMemo } from "react";
 import { ChildNode } from "@/features/timeline/components/childNode";
+import { getTextWidth } from "@/lib/utils";
 import type { TimelineNode } from "@/services/types";
 
 interface TimelineBlockProps {
@@ -17,7 +19,16 @@ export const TimelineBlock: React.FC<TimelineBlockProps> = ({
   onAddChild,
   onEditNode,
 }) => {
-  const isCompactMode = width < 250;
+  const isCompactMode = useMemo(() => {
+    const padding = 32;
+    const titleColumnWidth = width * 0.3 - padding;
+    const textWidth = getTextWidth(
+      data.title,
+      "bold 15px ui-sans-serif, system-ui, sans-serif",
+    );
+    return titleColumnWidth < 40 || textWidth > titleColumnWidth;
+  }, [width, data.title]);
+
   return (
     <div
       style={
