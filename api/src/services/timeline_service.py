@@ -87,7 +87,10 @@ class TimelineService:
     # Timeline Node Methods
     async def get_timeline_node_by_id(self, node_id: int) -> TimelineNodeWithChildren:
         """Get a timeline node by ID."""
-        return await self.timeline_repo.get_timeline_node_by_id(node_id)
+        node = await self.timeline_repo.get_timeline_node_by_id(node_id)
+        if not node:
+            raise TimelineNodeNotFoundError(Errors.TIMELINE_NODE_NOT_FOUND.value, details={"node_id": node_id})
+        return node
 
     async def create_timeline_node(self, timeline_node: TimelineNodeCreate, user_id: int) -> Timeline:
         """Create a new timeline."""
