@@ -220,24 +220,30 @@ class TimelineService:
                 details={"parent_id": parent_id, "reason": "Selected parent is already a child node. Max depth is 2."},
             )
 
+        if not parent_node.start_date:
+            raise InvalidTimelineNodeError(
+                Errors.INVALID_TIMELINE_NODE_HIERARCHY.value,
+                details={"reason": "Parent node has invalid dates (missing start)"},
+            )
+
+        if child_node.start_date < parent_node.start_date:
+            raise InvalidTimelineNodeError(
+                Errors.INVALID_TIMELINE_NODE_HIERARCHY.value,
+                details={
+                    "parent_start_date": parent_node.start_date.isoformat(),
+                    "child_start_date": child_node.start_date.isoformat(),
+                    "reason": "Child cannot start before parent",
+                },
+            )
+
         if not parent_node.is_current:
-            if not (parent_node.start_date and parent_node.end_date):
+            if not parent_node.end_date:
                 raise InvalidTimelineNodeError(
                     Errors.INVALID_TIMELINE_NODE_HIERARCHY.value,
-                    details={"reason": "Parent node has invalid dates (missing start or end)"},
+                    details={"reason": "Parent node has invalid dates (missing start)"},
                 )
 
-            if child_node.start_date < parent_node.start_date:
-                raise InvalidTimelineNodeError(
-                    Errors.INVALID_TIMELINE_NODE_HIERARCHY.value,
-                    details={
-                        "parent_start_date": parent_node.start_date.isoformat(),
-                        "child_start_date": child_node.start_date.isoformat(),
-                        "reason": "Child cannot start before parent",
-                    },
-                )
-
-            if child_node.is_current:
+            if (child_node.is_current) or (child_node.end_date is None):
                 raise InvalidTimelineNodeError(
                     Errors.INVALID_TIMELINE_NODE_HIERARCHY.value,
                     details={"reason": "Child cannot be 'current' if parent has a fixed end date"},
