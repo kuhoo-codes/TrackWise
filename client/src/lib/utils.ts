@@ -35,7 +35,7 @@ export const ONE_YEAR = 31557600000;
 
 export const MIN_SCALE = 10 / ONE_YEAR;
 
-export const MAX_SCALE = 100 / ONE_HOUR;
+export const MAX_SCALE = 20 / ONE_HOUR;
 
 export const DEFAULT_SCALE = 100 / ONE_MONTH;
 
