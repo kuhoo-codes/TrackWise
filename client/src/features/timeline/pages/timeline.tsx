@@ -1,6 +1,7 @@
 import { addYears } from "date-fns/addYears";
 import { Plus, Minus, ArrowLeft } from "lucide-react";
 import React, {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -64,7 +65,6 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
     () =>
       nodes.map((node) => ({
         ...node,
-        startDate: node.startDate,
         endDate: node.endDate ?? new Date(),
       })),
     [nodes],
@@ -115,10 +115,8 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
   };
 
   const handleDeleteNode = async (id: number) => {
-    if (confirm("Delete this node?")) {
-      await deleteNode(id);
-      setIsModalOpen(false);
-    }
+    await deleteNode(id);
+    setIsModalOpen(false);
   };
 
   const { viewStartDate, viewEndDate } = useMemo(() => {
@@ -165,11 +163,28 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
     }
   };
 
+  const performZoom = useCallback(
+    (focusTime: Date, focusOffsetPixels: number, zoomFactor: number) => {
+      zoomAnchorRef.current = {
+        time: focusTime,
+        offsetFromLeft: focusOffsetPixels,
+      };
+
+      const newScale = Math.min(
+        Math.max(scale * zoomFactor, MIN_SCALE),
+        MAX_SCALE,
+      );
+
+      setScale(newScale);
+    },
+    [scale],
+  );
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const handleWheel = (e: WheelEvent) => {
+    const handlePinchZoom = (e: WheelEvent) => {
       if (e.ctrlKey) {
         e.preventDefault();
         const rect = container.getBoundingClientRect();
@@ -178,24 +193,32 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
 
         const timeUnderMouse = getDateFromX(viewStartDate, absoluteX, scale);
 
-        zoomAnchorRef.current = {
-          time: timeUnderMouse,
-          offsetFromLeft: mouseX,
-        };
-
         const zoomFactor = e.deltaY < 0 ? 1.05 : 0.95;
-        const newScale = Math.min(
-          Math.max(scale * zoomFactor, MIN_SCALE),
-          MAX_SCALE,
-        );
-
-        setScale(newScale);
+        performZoom(timeUnderMouse, mouseX, zoomFactor);
       }
     };
 
-    container.addEventListener("wheel", handleWheel, { passive: false });
-    return () => container.removeEventListener("wheel", handleWheel);
-  }, [scale, isLoading, viewStartDate]);
+    container.addEventListener("wheel", handlePinchZoom, { passive: false });
+    return () => container.removeEventListener("wheel", handlePinchZoom);
+  }, [scale, isLoading, viewStartDate, performZoom]);
+
+  const handleButtonZoom = (direction: "in" | "out") => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const clientWidth = container.clientWidth;
+    const centerOffset = clientWidth / 2;
+    const centerPixelAbsolute = container.scrollLeft + centerOffset;
+
+    const timeAtCenter = getDateFromX(
+      viewStartDate,
+      centerPixelAbsolute,
+      scale,
+    );
+
+    const factor = direction === "in" ? 1.5 : 0.6;
+    performZoom(timeAtCenter, centerOffset, factor);
+  };
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -231,31 +254,6 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
       hasInitializedScroll.current = true;
     }
   }, [scale, viewStartDate, isLoading, nodes.length]);
-
-  const handleManualZoom = (direction: "in" | "out") => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const clientWidth = container.clientWidth;
-    const centerOffset = clientWidth / 2;
-    const centerPixelAbsolute = container.scrollLeft + centerOffset;
-
-    const timeAtCenter = getDateFromX(
-      viewStartDate,
-      centerPixelAbsolute,
-      scale,
-    );
-
-    zoomAnchorRef.current = {
-      time: timeAtCenter,
-      offsetFromLeft: centerOffset,
-    };
-
-    const factor = direction === "in" ? 1.5 : 0.6;
-    const newScale = Math.min(Math.max(scale * factor, MIN_SCALE), MAX_SCALE);
-
-    setScale(newScale);
-  };
 
   const itemsWithLanes = useMemo(() => {
     const sorted = [...uiItems].sort(
@@ -321,16 +319,26 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
       {/* --- ZOOM CONTROLS UI --- */}
       <div className="absolute bottom-8 right-8 z-50 flex flex-col gap-2 shadow-xl rounded-lg bg-white p-1 border border-gray-200">
         <button
-          onClick={() => handleManualZoom("in")}
-          className="p-2 hover:bg-gray-100 rounded text-gray-700 transition-colors"
+          onClick={() => handleButtonZoom("in")}
+          disabled={scale >= MAX_SCALE}
+          className="
+            p-2 rounded text-gray-700 transition-colors
+            hover:bg-gray-100 
+            disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent
+          "
           title="Zoom In"
         >
           <Plus size={20} />
         </button>
         <div className="h-px w-full bg-gray-200" />
         <button
-          onClick={() => handleManualZoom("out")}
-          className="p-2 hover:bg-gray-100 rounded text-gray-700 transition-colors"
+          onClick={() => handleButtonZoom("out")}
+          disabled={scale <= MIN_SCALE}
+          className="
+            p-2 rounded text-gray-700 transition-colors
+            hover:bg-gray-100 
+            disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent
+          "
           title="Zoom Out"
         >
           <Minus size={20} />
