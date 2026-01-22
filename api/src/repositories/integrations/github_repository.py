@@ -193,6 +193,8 @@ class GithubRepository:
                     "deletions": commit.stats.deletions,
                     "total": commit.stats.total,
                     "files": files_json,
+                    "significance_score": commit.significance_score,
+                    "significance_classification": commit.significance_classification,
                 }
             )
 

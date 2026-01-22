@@ -3,6 +3,8 @@ from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
+from src.schemas.integrations.significance import SignificanceLevel
+
 
 class GithubToken(BaseModel):
     access_token: str
@@ -97,6 +99,8 @@ class CommitFile(BaseModel):
 class Commit(RepoCommit):
     stats: CommitStat
     files: list[CommitFile]
+    significance_score: float | None = None
+    significance_classification: SignificanceLevel | None = None
 
 
 class Repository(BaseModel):
