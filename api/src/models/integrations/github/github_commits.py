@@ -1,7 +1,17 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from enum import Enum
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 
 from src.db.database import Base
+
+
+class SignificanceLevel(str, Enum):
+    FEATURE = "FEATURE"  # High impact changes
+    REFACTOR = "REFACTOR"  # Medium impact logic changes
+    CHORE = "CHORE"  # Low impact/maintenance
+    NOISE = "NOISE"  # Ignored/Zero impact
 
 
 class GithubCommit(Base):
@@ -18,3 +28,5 @@ class GithubCommit(Base):
     deletions = Column(Integer, nullable=False)
     total = Column(Integer, nullable=False)
     files = Column(JSONB, nullable=True)
+    significance_score = Column(Float, nullable=True, default=0.0)
+    significance_classification = Column(SAEnum(SignificanceLevel), nullable=True)
