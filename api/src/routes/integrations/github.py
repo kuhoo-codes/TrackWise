@@ -14,6 +14,7 @@ from src.repositories.user_repository import UserRepository
 from src.schemas.integrations.github import TokenResponse
 from src.services.auth_service import AuthService
 from src.services.integrations.github_service import GithubService
+from src.services.integrations.significance_analyzer_service import SignificanceAnalyzerService
 
 router = APIRouter(prefix="/integrations/github", tags=["GitHub Integration"])
 security = HTTPBearer()
@@ -26,7 +27,7 @@ def get_auth_service(db: Annotated[AsyncSession, Depends(get_db)]) -> AuthServic
 
 def get_github_service(db: Annotated[AsyncSession, Depends(get_db)]) -> GithubService:
     """Dependency to get GitHubService with database session."""
-    return GithubService(GithubRepository(db), ExternalProfileRepository(db))
+    return GithubService(GithubRepository(db), ExternalProfileRepository(db), SignificanceAnalyzerService())
 
 
 @router.get("/auth-url")

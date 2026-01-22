@@ -14,15 +14,24 @@ from src.models.integrations.github import GithubRepository as GithubRepoModel
 from src.repositories.integrations.external_profile_repository import ExternalProfileRepository
 from src.repositories.integrations.github_repository import GithubRepository
 from src.schemas.integrations.github import Commit, GithubToken, Issue, RepoCommit, Repository, TokenResponse, User
+from src.schemas.integrations.significance import FileChange
+from src.services.integrations.significance_analyzer_service import SignificanceAnalyzerService
 
 
 class GithubService:
-    def __init__(self, repo: GithubRepository, external_profile_repo: ExternalProfileRepository) -> None:
+    def __init__(
+        self,
+        repo: GithubRepository,
+        external_profile_repo: ExternalProfileRepository,
+        analyzer_service: SignificanceAnalyzerService,
+    ) -> None:
         self.repo = repo
         self.external_profile_repo = external_profile_repo
+        self.analyzer_service = analyzer_service
         self.GITHUB_API_URL = settings.GITHUB_BASE_API_URL
         self.GITHUB_ROUTES = GithubRoutes
         self.PER_PAGE = settings.GITHUB_PER_PAGE
+        self.semaphore = asyncio.Semaphore(10)
 
     async def get_auth_url(self, user_id: Annotated[str, "Associated user ID"]) -> str:
         """Generate GitHub OAuth authorization URL."""
@@ -426,13 +435,24 @@ class GithubService:
         response.raise_for_status()
 
         adapter = TypeAdapter(Commit)
-        return adapter.validate_python(response.json())
+        commit_detail = adapter.validate_python(response.json())
+
+        file_changes = [
+            FileChange(filename=f.filename, additions=f.additions, deletions=f.deletions)
+            for f in (commit_detail.files or [])
+        ]
+
+        analysis = self.analyzer_service.analyze_commit(message=commit_detail.commit.message, files=file_changes)
+
+        commit_detail.significance_score = analysis.score
+        commit_detail.significance_classification = analysis.classification
+
+        return commit_detail
 
     async def fetch_with_semaphore(self, client: httpx.AsyncClient, commit: RepoCommit) -> Commit:
         """Wrapper to acquire semaphore before fetching."""
         # Create a semaphore to limit concurrency to 10 to avoid rate limits
-        semaphore = asyncio.Semaphore(10)
-        async with semaphore:
+        async with self.semaphore:
             if not commit.url:
                 logger.warning("Commit URL is missing for commit SHA: {}", commit.sha)
                 return None

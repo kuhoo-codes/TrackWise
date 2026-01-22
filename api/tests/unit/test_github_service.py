@@ -22,9 +22,21 @@ def mock_external_profile_repo() -> AsyncMock:
 
 
 @pytest.fixture
-def github_service(mock_github_repo: AsyncMock, mock_external_profile_repo: AsyncMock) -> GithubService:
-    """Fixture for the GitHubService with a mocked repository."""
-    return GithubService(repo=mock_github_repo, external_profile_repo=mock_external_profile_repo)
+def mock_significance_service() -> MagicMock:
+    """Fixture for a mocked SignificanceAnalyzerService."""
+    return MagicMock()
+
+
+@pytest.fixture
+def github_service(
+    mock_github_repo: AsyncMock, mock_external_profile_repo: AsyncMock, mock_significance_service: MagicMock
+) -> GithubService:
+    """Fixture for the GitHubService with all dependencies injected."""
+    return GithubService(
+        repo=mock_github_repo,
+        external_profile_repo=mock_external_profile_repo,
+        analyzer_service=mock_significance_service,
+    )
 
 
 # --- Tests for get_auth_url ---
