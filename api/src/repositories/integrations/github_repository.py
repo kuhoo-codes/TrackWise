@@ -69,6 +69,12 @@ class GithubRepository:
             )
         return token
 
+    async def get_commits_by_repo_id(self, repo_id: int) -> list[GithubCommit]:
+        """Fetch commits from the database for a given repository ID."""
+        stmt = select(GithubCommit).where(GithubCommit.repository_id == repo_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
     async def bulk_upsert_repositories(
         self, repos_data: list[Repository], external_profile_id: Annotated[int, "Foreign key to ExternalProfile"]
     ) -> list[GithubRepositoryModel]:
