@@ -13,8 +13,8 @@ from src.repositories.integrations.github_repository import GithubRepository
 from src.repositories.user_repository import UserRepository
 from src.schemas.integrations.github import TokenResponse
 from src.services.auth_service import AuthService
+from src.services.integrations.analysis.significance_analyzer_service import SignificanceAnalyzerService
 from src.services.integrations.github_service import GithubService
-from src.services.integrations.significance_analyzer_service import SignificanceAnalyzerService
 
 router = APIRouter(prefix="/integrations/github", tags=["GitHub Integration"])
 security = HTTPBearer()

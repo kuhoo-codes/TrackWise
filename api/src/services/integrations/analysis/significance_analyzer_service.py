@@ -2,7 +2,7 @@ import fnmatch
 import math
 import os
 
-from src.schemas.integrations.significance import FileChange, SignificanceLevel, SignificanceResult
+from src.schemas.integrations.analysis.significance import FileChange, SignificanceLevel, SignificanceResult
 from src.services.integrations.constants import (
     HIGH_VALUE_EXTS,
     IGNORED_PATTERNS,
@@ -14,37 +14,6 @@ from src.services.integrations.constants import (
 
 
 class SignificanceAnalyzerService:
-    def _check_keywords(self, message: str) -> float:
-        """Returns a multiplier based on the commit message content."""
-        msg = message.lower()
-        if any(word in msg for word in ["feat", "add", "new", "implement"]):
-            return 1.2  # Boost for features
-        if any(word in msg for word in ["refactor", "lint", "format", "style", "pretty"]):
-            return 0.5  # Heavy penalty for mechanical changes
-        if any(word in msg for word in ["fix", "bug", "patch"]):
-            return 1.1  # Slight boost for fixes
-        return 1.0
-
-    def _get_file_weight(self, filename: str) -> float:
-        """Determines the weight of a file based on its name and extension."""
-        basename = os.path.basename(filename)
-        _, ext = os.path.splitext(filename)
-
-        for pattern in IGNORED_PATTERNS:
-            if fnmatch.fnmatch(filename, pattern):
-                return 0.0
-
-        if basename in MEDIUM_VALUE_FILES or ".github/workflows" in filename:
-            return WEIGHTS["MEDIUM"]
-
-        if ext in HIGH_VALUE_EXTS:
-            return WEIGHTS["HIGH"]
-
-        if ext in LOW_VALUE_EXTS:
-            return WEIGHTS["LOW"]
-
-        return 0.2
-
     def analyze_commit(self, message: str, files: list[FileChange]) -> SignificanceResult:
         """
         Calculates a significance score based on the heuristic:
@@ -91,3 +60,34 @@ class SignificanceAnalyzerService:
             classification=classification,
             is_significant=classification in [SignificanceLevel.FEATURE, SignificanceLevel.REFACTOR],
         )
+
+    def _check_keywords(self, message: str) -> float:
+        """Returns a multiplier based on the commit message content."""
+        msg = message.lower()
+        if any(word in msg for word in ["feat", "add", "new", "implement"]):
+            return 1.2  # Boost for features
+        if any(word in msg for word in ["refactor", "lint", "format", "style", "pretty"]):
+            return 0.5  # Heavy penalty for mechanical changes
+        if any(word in msg for word in ["fix", "bug", "patch"]):
+            return 1.1  # Slight boost for fixes
+        return 1.0
+
+    def _get_file_weight(self, filename: str) -> float:
+        """Determines the weight of a file based on its name and extension."""
+        basename = os.path.basename(filename)
+        _, ext = os.path.splitext(filename)
+
+        for pattern in IGNORED_PATTERNS:
+            if fnmatch.fnmatch(filename, pattern):
+                return 0.0
+
+        if basename in MEDIUM_VALUE_FILES or ".github/workflows" in filename:
+            return WEIGHTS["MEDIUM"]
+
+        if ext in HIGH_VALUE_EXTS:
+            return WEIGHTS["HIGH"]
+
+        if ext in LOW_VALUE_EXTS:
+            return WEIGHTS["LOW"]
+
+        return 0.2
