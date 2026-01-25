@@ -1,7 +1,7 @@
 import pytest
 
-from src.schemas.integrations.significance import FileChange, SignificanceLevel
-from src.services.integrations.significance_analyzer_service import SignificanceAnalyzerService
+from src.schemas.integrations.analysis.significance import FileChange, SignificanceLevel
+from src.services.integrations.analysis.significance_analyzer_service import SignificanceAnalyzerService
 
 
 @pytest.fixture

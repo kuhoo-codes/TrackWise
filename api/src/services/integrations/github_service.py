@@ -13,9 +13,9 @@ from src.models.integrations import ExternalProfile, PlatformEnum, SyncStatusEnu
 from src.models.integrations.github import GithubRepository as GithubRepoModel
 from src.repositories.integrations.external_profile_repository import ExternalProfileRepository
 from src.repositories.integrations.github_repository import GithubRepository
+from src.schemas.integrations.analysis.significance import FileChange
 from src.schemas.integrations.github import Commit, GithubToken, Issue, RepoCommit, Repository, TokenResponse, User
-from src.schemas.integrations.significance import FileChange
-from src.services.integrations.significance_analyzer_service import SignificanceAnalyzerService
+from src.services.integrations.analysis.significance_analyzer_service import SignificanceAnalyzerService
 
 
 class GithubService:

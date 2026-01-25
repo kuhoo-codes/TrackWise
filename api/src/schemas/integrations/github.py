@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
-from src.schemas.integrations.significance import SignificanceLevel
+from src.schemas.integrations.analysis.significance import SignificanceLevel
 
 
 class GithubToken(BaseModel):
