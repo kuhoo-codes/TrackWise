@@ -103,6 +103,25 @@ class Commit(RepoCommit):
     significance_classification: SignificanceLevel | None = None
 
 
+class CommitInDB(BaseModel):
+    sha: str
+    external_profile_id: int
+    author_id: int
+    repository_id: int
+    message: str
+    authored_at: datetime
+    html_url: str
+    additions: int
+    deletions: int
+    total: int
+    files: list[dict] | None = None
+    significance_score: float = 0.0
+    significance_classification: SignificanceLevel | None = None
+
+    class Config:
+        from_attributes = True
+
+
 class Repository(BaseModel):
     id: int
     fork: bool
