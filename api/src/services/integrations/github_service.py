@@ -457,3 +457,7 @@ class GithubService:
                 logger.warning("Commit URL is missing for commit SHA: {}", commit.sha)
                 return None
             return await self.fetch_commit_detail(client, commit)
+
+    async def get_commits_by_repo_id(self, repo_id: int) -> list[Commit]:
+        """Fetch commits from the database for a given repository ID."""
+        return await self.repo.get_commits_by_repo_id(repo_id)
