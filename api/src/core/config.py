@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     GITHUB_PER_PAGE: int = 100
     TOKEN_TYPE: str = os.getenv("TOKEN_TYPE", "Bearer")
     MINIMUM_PASSWORD_LENGTH: int = 8
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    OLLAMA_URL: str = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
     class Config:
         env_file = ".env"
