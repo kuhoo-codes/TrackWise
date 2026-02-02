@@ -396,3 +396,40 @@ async def test_fetch_with_semaphore_missing_url(github_service: GithubService) -
 
     result = await github_service.fetch_with_semaphore(client, commit)
     assert result.sha == "abc"
+
+
+@pytest.mark.asyncio
+async def test_get_commits_by_repo_id_success(
+    github_service: GithubService, mock_external_profile_repo: AsyncMock, mock_github_repo: AsyncMock
+) -> None:
+    """
+    Test that get_commits_by_repo_id retrieves the correct profile
+    and calls the repository with the profile ID.
+    """
+    # --- Setup ---
+    user_id = 123
+    repo_id = 456
+    profile_id = 789
+
+    # Mock External Profile
+    mock_profile = MagicMock(spec=ExternalProfile)
+    mock_profile.id = profile_id
+    mock_external_profile_repo.get_external_profile_by_user_id.return_value = mock_profile
+
+    # Mock Commits return
+    mock_commits = [MagicMock(), MagicMock()]
+    mock_github_repo.get_commits_by_repo_id.return_value = mock_commits
+
+    # --- Execute ---
+    result = await github_service.get_commits_by_repo_id(repo_id, user_id)
+
+    # --- Assert ---
+    # 1. Verify profile lookup
+    mock_external_profile_repo.get_external_profile_by_user_id.assert_called_once_with(user_id, PlatformEnum.GITHUB)
+
+    # 2. Verify repo lookup using the retrieved profile ID
+    mock_github_repo.get_commits_by_repo_id.assert_called_once_with(repo_id, profile_id)
+
+    # 3. Verify final output
+    assert result == mock_commits
+    assert len(result) == 2
