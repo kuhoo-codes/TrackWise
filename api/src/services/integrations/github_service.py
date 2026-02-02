@@ -458,6 +458,9 @@ class GithubService:
                 return None
             return await self.fetch_commit_detail(client, commit)
 
-    async def get_commits_by_repo_id(self, repo_id: int) -> list[Commit]:
+    async def get_commits_by_repo_id(self, repo_id: int, user_id: int) -> list[Commit]:
         """Fetch commits from the database for a given repository ID."""
-        return await self.repo.get_commits_by_repo_id(repo_id)
+        external_profile = await self.external_profile_repo.get_external_profile_by_user_id(
+            user_id, PlatformEnum.GITHUB
+        )
+        return await self.repo.get_commits_by_repo_id(repo_id, external_profile.id)
