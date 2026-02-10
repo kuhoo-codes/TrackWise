@@ -242,7 +242,7 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
 
     // --- CASE 2: HANDLE INITIAL LOAD (Secondary) ---
     // If we haven't zoomed, and we haven't initialized the view yet...
-    if (!hasInitializedScroll.current && !isLoading && nodes.length > 0) {
+    if (!hasInitializedScroll.current && !isLoading) {
       const clientWidth = container.clientWidth;
 
       // Center on "Today"
