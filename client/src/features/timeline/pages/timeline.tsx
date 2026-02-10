@@ -246,14 +246,20 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
       const clientWidth = container.clientWidth;
 
       // Center on "Today"
-      const targetDate = new Date();
+      let targetDate = new Date();
+
+      if (nodes.length > 0) {
+        const startTimes = nodes.map((n) => new Date(n.startDate).getTime());
+        targetDate = new Date(Math.min(...startTimes));
+      }
+
       const xPos = getXPosition(viewStartDate, targetDate, scale);
       const initialScroll = xPos - clientWidth / 2;
 
       container.scrollLeft = initialScroll;
       hasInitializedScroll.current = true;
     }
-  }, [scale, viewStartDate, isLoading, nodes.length]);
+  }, [scale, viewStartDate, isLoading, nodes]);
 
   const itemsWithLanes = useMemo(() => {
     const sorted = [...uiItems].sort(
