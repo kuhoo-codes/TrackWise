@@ -92,7 +92,7 @@ class TimelineService:
             raise TimelineNodeNotFoundError(Errors.TIMELINE_NODE_NOT_FOUND.value, details={"node_id": node_id})
         return node
 
-    async def create_timeline_node(self, timeline_node: TimelineNodeCreate, user_id: int) -> Timeline:
+    async def create_timeline_node(self, timeline_node: TimelineNodeCreate, user_id: int) -> TimelineNode:
         """Create a new timeline."""
         timeline = await self.timeline_repo.get_timeline_by_id(timeline_node.timeline_id, user_id)
         if not timeline:
