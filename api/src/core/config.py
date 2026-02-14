@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     MINIMUM_PASSWORD_LENGTH: int = 8
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     OLLAMA_URL: str = os.getenv("OLLAMA_URL", "http://localhost:11434")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
 
     class Config:
         env_file = ".env"

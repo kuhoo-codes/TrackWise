@@ -15,7 +15,10 @@ from src.repositories.integrations.external_profile_repository import ExternalPr
 from src.repositories.integrations.github_repository import GithubRepository
 from src.schemas.integrations.analysis.significance import FileChange
 from src.schemas.integrations.github import Commit, GithubToken, Issue, RepoCommit, Repository, TokenResponse, User
+from src.schemas.timelines import TimelineCreate
+from src.schemas.users import TokenData
 from src.services.integrations.analysis.significance_analyzer_service import SignificanceAnalyzerService
+from src.services.timeline_service import TimelineService
 
 
 class GithubService:
@@ -24,10 +27,12 @@ class GithubService:
         repo: GithubRepository,
         external_profile_repo: ExternalProfileRepository,
         analyzer_service: SignificanceAnalyzerService,
+        timeline_service: TimelineService,
     ) -> None:
         self.repo = repo
         self.external_profile_repo = external_profile_repo
         self.analyzer_service = analyzer_service
+        self.timeline_service = timeline_service
         self.GITHUB_API_URL = settings.GITHUB_BASE_API_URL
         self.GITHUB_ROUTES = GithubRoutes
         self.PER_PAGE = settings.GITHUB_PER_PAGE
@@ -463,4 +468,88 @@ class GithubService:
         external_profile = await self.external_profile_repo.get_external_profile_by_user_id(
             user_id, PlatformEnum.GITHUB
         )
+        if not external_profile:
+            raise GitHubIntegrationError(
+                Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub external profile not found"}
+            )
         return await self.repo.get_commits_by_repo_id(repo_id, external_profile.id)
+
+    async def generate_timelines_from_github(self, token_data: TokenData) -> None:
+        """Generate timelines for a GitHub user."""
+        external_profile = await self.external_profile_repo.get_external_profile_by_user_id(
+            token_data.sub, PlatformEnum.GITHUB
+        )
+        if not external_profile:
+            raise GitHubIntegrationError(
+                Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub external profile not found"}
+            )
+
+        repos = await self.repo.get_db_repositories(external_profile.id)
+        if not repos:
+            logger.warning("No repositories found for external profile ID: {}", external_profile.id)
+            return
+
+        for repo in repos:
+            commits = await self.get_commits_by_repo_id(repo.id, token_data.sub)
+            if commits:
+                timeline_create = TimelineCreate(
+                    title=repo.name,
+                    description=repo.description,
+                    is_public=False,
+                )
+
+                timeline = await self.timeline_service.create_timeline(timeline_create, token_data)
+                await self.timeline_service.generate_nodes_for_commits(
+                    commits=commits, timeline_id=timeline.id, repo_id=repo.id
+                )
+
+    async def generate_all_github_timelines(self, token_data: TokenData) -> None:
+        """
+        Iterates through all synced repositories and generates individual timelines.
+        """
+        external_profile = await self.external_profile_repo.get_external_profile_by_user_id(
+            token_data.sub, PlatformEnum.GITHUB
+        )
+        if not external_profile:
+            raise GitHubIntegrationError(
+                Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub external profile not found"}
+            )
+
+        repos = await self.repo.get_db_repositories(external_profile.id)
+        if not repos:
+            logger.warning("No repositories found for external profile ID: {}", external_profile.id)
+            return
+
+        for repo in repos:
+            await self.generate_timeline_for_repo(repo, token_data)
+
+        logger.info(
+            "Completed timeline generation for all repositories of external profile ID: {}", external_profile.id
+        )
+
+    async def generate_timeline_for_repo(self, repo: Repository, token_data: TokenData) -> None:
+        """
+        Generates a timeline for a specific repository object.
+        """
+        if not repo:
+            logger.error(f"Repository with ID {repo.id} not found in DB.")
+            return
+
+        commits = await self.get_commits_by_repo_id(repo.id, token_data.sub)
+        if not commits:
+            logger.info(f"No commits found for {repo.name}. Skipping timeline creation.")
+            return
+
+        logger.info(f"Generating timeline for '{repo.name}' with {len(commits)} commits.")
+
+        timeline_create = TimelineCreate(
+            title=repo.name,
+            description=repo.description or f"Development history of {repo.full_name}",
+            is_public=False,
+        )
+
+        timeline = await self.timeline_service.create_timeline(timeline_create, token_data)
+
+        await self.timeline_service.generate_nodes_for_commits(
+            commits=commits, timeline_id=timeline.id, repo_id=repo.id, user_id=token_data.sub
+        )

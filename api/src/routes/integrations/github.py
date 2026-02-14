@@ -11,10 +11,12 @@ from src.exceptions.auth import UserNotFoundError
 from src.repositories.integrations.external_profile_repository import ExternalProfileRepository
 from src.repositories.integrations.github_repository import GithubRepository
 from src.repositories.user_repository import UserRepository
+from src.routes.timeline import get_timeline_service
 from src.schemas.integrations.github import TokenResponse
 from src.services.auth_service import AuthService
 from src.services.integrations.analysis.significance_analyzer_service import SignificanceAnalyzerService
 from src.services.integrations.github_service import GithubService
+from src.services.timeline_service import TimelineService
 
 router = APIRouter(prefix="/integrations/github", tags=["GitHub Integration"])
 security = HTTPBearer()
@@ -25,9 +27,20 @@ def get_auth_service(db: Annotated[AsyncSession, Depends(get_db)]) -> AuthServic
     return AuthService(UserRepository(db))
 
 
-def get_github_service(db: Annotated[AsyncSession, Depends(get_db)]) -> GithubService:
-    """Dependency to get GitHubService with database session."""
-    return GithubService(GithubRepository(db), ExternalProfileRepository(db), SignificanceAnalyzerService())
+def get_github_service(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    timeline_service: Annotated[TimelineService, Depends(get_timeline_service)],
+) -> GithubService:
+    """
+    Dependency to get GitHubService.
+    It reuses get_timeline_service to ensure AI and Clustering are injected correctly.
+    """
+    return GithubService(
+        repo=GithubRepository(db),
+        external_profile_repo=ExternalProfileRepository(db),
+        analyzer_service=SignificanceAnalyzerService(),
+        timeline_service=timeline_service,
+    )
 
 
 @router.get("/auth-url")
@@ -72,4 +85,24 @@ async def start_github_sync(
     return JSONResponse(
         status_code=200,
         content={"message": "GitHub synchronization has been started."},
+    )
+
+
+@router.post("/sync-timelines", status_code=202)
+async def sync_github_timelines(
+    background_tasks: BackgroundTasks,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    github_service: Annotated[GithubService, Depends(get_github_service)],
+) -> JSONResponse:
+    """
+    Triggers the creation of timelines and nodes from all GitHub repositories of the user.
+    """
+    token_data = auth_service.verify_token(token=credentials.credentials)
+
+    # We run this in the background to avoid timing out the HTTP request
+    background_tasks.add_task(github_service.generate_all_github_timelines, token_data=token_data)
+    return JSONResponse(
+        status_code=202,
+        content={"message": "Timeline generation for all repositories started in the background."},
     )

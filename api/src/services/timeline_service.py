@@ -1,16 +1,29 @@
+from loguru import logger
+
 from src.core.config import Errors
 from src.exceptions.timeline import InvalidTimelineNodeError, TimelineNodeNotFoundError, TimelineNotFoundError
 from src.models.timeline_nodes import TimelineNode
 from src.models.timelines import Timeline
 from src.repositories.timeline_repository import TimelineRepository
+from src.schemas.integrations.ai.timeline_analysis import AnalysisAction, AnalysisResult
+from src.schemas.integrations.github import Commit
 from src.schemas.timelines import Timeline as TimelineSchema
 from src.schemas.timelines import TimelineCreate, TimelineNodeBase, TimelineNodeCreate, TimelineNodeWithChildren
 from src.services.auth_service import TokenData
+from src.services.integrations.ai.timeline_analysis_service import TimelineAnalysisService
+from src.services.integrations.analysis.activity_clustering_service import ActivityClusteringService
 
 
 class TimelineService:
-    def __init__(self, timeline_repo: TimelineRepository) -> None:
+    def __init__(
+        self,
+        timeline_repo: TimelineRepository,
+        clustering_service: ActivityClusteringService,
+        ai_service: TimelineAnalysisService,
+    ) -> None:
         self.timeline_repo = timeline_repo
+        self.clustering_service = clustering_service
+        self.ai_service = ai_service
 
     # Timeline Methods
     async def get_user_timelines(self, user_id: int) -> list[Timeline]:
@@ -169,6 +182,59 @@ class TimelineService:
             raise TimelineNodeNotFoundError(Errors.TIMELINE_NODE_NOT_FOUND.value, details={"node_id": node_id})
 
         await self.timeline_repo.delete_timeline_node(node_id)
+
+    async def generate_nodes_for_commits(
+        self, commits: list[Commit], timeline_id: int, repo_id: int, user_id: int
+    ) -> None:
+        """
+        Processes clusters through AI and persists the results as nodes in a specific timeline.
+        """
+
+        last_parent: TimelineNode | None = None
+
+        clusters = self.clustering_service.cluster_commits(commits)
+        for cluster in clusters:
+            if cluster.is_shallow:
+                continue
+            try:
+                ai_result: AnalysisResult = await self.ai_service.analyze_cluster(cluster, repo_id)
+
+                if ai_result.action == AnalysisAction.IGNORE:
+                    logger.info(f"AI ignored cluster: {cluster.topic} - Reasoning: {ai_result.reasoning}")
+                    continue
+
+                if ai_result.node_content:
+                    node_data = TimelineNodeCreate(**ai_result.node_content.model_dump(), timeline_id=timeline_id)
+
+                    node_data.github_repo_id = repo_id
+                    if node_data.end_date is not None:
+                        node_data.is_current = False
+
+                    if ai_result.action == AnalysisAction.MERGE_TO_PARENT and last_parent:
+                        node_data.parent_id = last_parent.id
+
+                        needs_update = False
+                        if node_data.start_date < last_parent.start_date:
+                            last_parent.start_date = node_data.start_date
+                            needs_update = True
+                        if node_data.end_date and (
+                            not last_parent.end_date or node_data.end_date > last_parent.end_date
+                        ):
+                            last_parent.end_date = node_data.end_date
+                            needs_update = True
+
+                        if needs_update:
+                            await self.update_timeline_node(last_parent.id, last_parent, user_id)
+
+                    created_node = await self.create_timeline_node(timeline_node=node_data, user_id=user_id)
+
+                    if last_parent is None or ai_result.action == AnalysisAction.CREATE_NODE:
+                        last_parent = created_node
+
+            except Exception as e:
+                logger.error(f"Failed to process cluster {cluster.id} for timeline {timeline_id}: {str(e)}")
+                continue
+        logger.success(f"Timeline generation complete for repository ID: {repo_id}")
 
     # Helper Validation Methods
     def _validate_dates(self, timeline_node: TimelineNodeCreate | TimelineNodeBase) -> None:
