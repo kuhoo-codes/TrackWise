@@ -85,6 +85,12 @@ class GithubRepository:
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
+    async def get_repository_by_id(self, repo_id: int) -> GithubRepositoryModel:
+        """Fetch a GitHub repository by ID from the database."""
+        stmt = select(GithubRepositoryModel).where(GithubRepositoryModel.id == repo_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
     async def bulk_upsert_repositories(
         self, repos_data: list[Repository], external_profile_id: Annotated[int, "Foreign key to ExternalProfile"]
     ) -> list[GithubRepositoryModel]:

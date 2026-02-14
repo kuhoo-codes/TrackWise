@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -9,6 +9,8 @@ from src.exceptions.timeline import (
 )
 from src.models.timeline_nodes import TimelineNode
 from src.models.timelines import Timeline
+from src.schemas.integrations.ai.timeline_analysis import AnalysisAction, AnalysisResult
+from src.schemas.integrations.analysis.cluster import Cluster
 from src.schemas.timelines import TimelineCreate, TimelineNodeBase, TimelineNodeCreate
 from src.services.auth_service import TokenData
 from src.services.timeline_service import TimelineService
@@ -20,8 +22,25 @@ def mock_timeline_repo() -> AsyncMock:
 
 
 @pytest.fixture
-def timeline_service(mock_timeline_repo: AsyncMock) -> TimelineService:
-    return TimelineService(timeline_repo=mock_timeline_repo)
+def mock_clustering_service() -> MagicMock:
+    """Fixture for a mocked ActivityClusteringService."""
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_ai_service() -> AsyncMock:
+    """Fixture for a mocked TimelineAnalysisService."""
+    return AsyncMock()
+
+
+@pytest.fixture
+def timeline_service(
+    mock_timeline_repo: AsyncMock, mock_clustering_service: MagicMock, mock_ai_service: AsyncMock
+) -> TimelineService:
+    """Fixture for TimelineService with all required dependencies."""
+    return TimelineService(
+        timeline_repo=mock_timeline_repo, clustering_service=mock_clustering_service, ai_service=mock_ai_service
+    )
 
 
 @pytest.fixture
@@ -210,3 +229,81 @@ async def test_delete_timeline_node_success(timeline_service: TimelineService, m
     await timeline_service.delete_timeline_node(node_id, user_id)
 
     mock_timeline_repo.delete_timeline_node.assert_called_once_with(node_id)
+
+
+@pytest.mark.asyncio
+async def test_generate_nodes_for_commits_hierarchy_and_expansion(
+    timeline_service: TimelineService,
+    mock_clustering_service: MagicMock,
+    mock_ai_service: AsyncMock,
+    mock_timeline_repo: AsyncMock,
+) -> None:
+    # --- Setup ---
+    user_id, timeline_id, repo_id = 1, 10, 100
+    UTC = timezone.utc
+
+    # Parent: Feb 1 -> Mar 10 | Child: Mar 15 -> Mar 20 (Triggers End Date Expansion)
+    cluster_p = MagicMock(
+        spec=Cluster,
+        is_shallow=False,
+        id="c1",
+        start_date=datetime(2025, 2, 1, tzinfo=UTC),
+        end_date=datetime(2025, 3, 10, tzinfo=UTC),
+    )
+    cluster_c = MagicMock(
+        spec=Cluster,
+        is_shallow=False,
+        id="c2",
+        start_date=datetime(2025, 3, 15, tzinfo=UTC),
+        end_date=datetime(2025, 3, 20, tzinfo=UTC),
+    )
+    mock_clustering_service.cluster_commits.return_value = [cluster_p, cluster_c]
+
+    # Mock AI Responses
+    ai_p = AnalysisResult(
+        action=AnalysisAction.CREATE_NODE,
+        reasoning="Major feature identified",
+        node_content=TimelineNodeBase(
+            title="Parent",
+            type="project",
+            is_current=False,
+            start_date=cluster_p.start_date,
+            end_date=cluster_p.end_date,
+        ),
+    )
+    ai_c = AnalysisResult(
+        action=AnalysisAction.MERGE_TO_PARENT,
+        reasoning="Minor follow-up work",
+        node_content=TimelineNodeBase(
+            title="Child",
+            type="project",
+            is_current=False,
+            start_date=cluster_c.start_date,
+            end_date=cluster_c.end_date,
+        ),
+    )
+    mock_ai_service.analyze_cluster.side_effect = [ai_p, ai_c]
+
+    # --- Parent Mock Fix ---
+    parent_node_db = MagicMock()
+    parent_node_db.id = 55
+    parent_node_db.timeline_id = timeline_id
+    parent_node_db.start_date = cluster_p.start_date
+    parent_node_db.end_date = cluster_p.end_date
+    parent_node_db.is_current = False
+    parent_node_db.parent_id = None
+
+    # Mock Repository
+    mock_timeline_repo.get_timeline_by_id.return_value = MagicMock(id=timeline_id)
+    mock_timeline_repo.get_timeline_node_by_id.return_value = parent_node_db
+    mock_timeline_repo.get_timeline_node_lite.return_value = parent_node_db
+    mock_timeline_repo.create_timeline_node.side_effect = [parent_node_db, MagicMock(id=56)]
+
+    # --- Execute ---
+    await timeline_service.generate_nodes_for_commits([], timeline_id, repo_id, user_id)
+
+    # --- Assertions ---
+    assert mock_timeline_repo.create_timeline_node.call_count == 2
+
+    mock_timeline_repo.update_timeline_node.assert_called_once()
+    assert parent_node_db.end_date == cluster_c.end_date

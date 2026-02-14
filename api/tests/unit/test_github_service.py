@@ -28,14 +28,23 @@ def mock_significance_service() -> MagicMock:
 
 
 @pytest.fixture
+def mock_timeline_service() -> AsyncMock:
+    """Fixture for a mocked TimelineService."""
+    return AsyncMock()
+
+
+@pytest.fixture
 def github_service(
-    mock_github_repo: AsyncMock, mock_external_profile_repo: AsyncMock, mock_significance_service: MagicMock
+    mock_github_repo: AsyncMock,
+    mock_external_profile_repo: AsyncMock,
+    mock_significance_service: MagicMock,
+    mock_timeline_service: AsyncMock,
 ) -> GithubService:
-    """Fixture for the GitHubService with all dependencies injected."""
     return GithubService(
         repo=mock_github_repo,
         external_profile_repo=mock_external_profile_repo,
         analyzer_service=mock_significance_service,
+        timeline_service=mock_timeline_service,
     )
 
 
@@ -433,3 +442,86 @@ async def test_get_commits_by_repo_id_success(
     # 3. Verify final output
     assert result == mock_commits
     assert len(result) == 2
+
+
+@pytest.mark.asyncio
+async def test_generate_timeline_for_repo_success(
+    github_service: GithubService,
+    mock_github_repo: AsyncMock,
+    mock_timeline_service: AsyncMock,
+    mock_external_profile_repo: AsyncMock,
+) -> None:
+    # --- Setup ---
+    user_id = 1
+    token_data = MagicMock(sub=user_id)
+
+    # Use a real Repository schema or ensure the Mock attributes are strings
+    repo_mock = MagicMock()
+    repo_mock.id = 101
+    repo_mock.name = "TrackWise"  # Ensure this is a raw string
+    repo_mock.full_name = "user/TrackWise"
+    repo_mock.description = "Cool project"
+
+    mock_github_repo.get_repo_by_id.return_value = repo_mock
+
+    # Mock external profile with a real ID
+    mock_profile = MagicMock()
+    mock_profile.id = 50
+    mock_external_profile_repo.get_external_profile_by_user_id.return_value = mock_profile
+
+    # Mock commits as a list of real/mocked objects that won't fail validation
+    mock_github_repo.get_commits_by_repo_id.return_value = [MagicMock(), MagicMock()]
+
+    # Mock timeline creation return value
+    created_timeline = MagicMock()
+    created_timeline.id = 99
+    mock_timeline_service.create_timeline.return_value = created_timeline
+
+    # --- Execute ---
+    await github_service.generate_timeline_for_repo(repo_mock, token_data)
+
+    # --- Assert ---
+    mock_timeline_service.create_timeline.assert_called_once()
+    mock_timeline_service.generate_nodes_for_commits.assert_called_once_with(
+        commits=mock_github_repo.get_commits_by_repo_id.return_value, timeline_id=99, repo_id=101, user_id=user_id
+    )
+
+
+@pytest.mark.asyncio
+async def test_generate_all_github_timelines_multiple_repos(
+    github_service: GithubService, mock_external_profile_repo: AsyncMock, mock_github_repo: AsyncMock
+) -> None:
+    # --- Setup ---
+    token_data = MagicMock(sub=1)
+    mock_profile = MagicMock(id=50)
+    mock_external_profile_repo.get_external_profile_by_user_id.return_value = mock_profile
+
+    # Mock two repositories in the DB
+    repo1 = MagicMock(id=101)
+    repo2 = MagicMock(id=102)
+    mock_github_repo.get_db_repositories.return_value = [repo1, repo2]
+
+    # Patch the single-repo method so we don't run the full logic twice
+    with patch.object(github_service, "generate_timeline_for_repo", new_callable=AsyncMock) as mock_single_gen:
+        # --- Execute ---
+        await github_service.generate_all_github_timelines(token_data)
+
+        # --- Assert ---
+        assert mock_single_gen.call_count == 2
+        mock_single_gen.assert_any_call(repo1, token_data)
+        mock_single_gen.assert_any_call(repo2, token_data)
+
+
+@pytest.mark.asyncio
+async def test_generate_all_github_timelines_no_profile(
+    github_service: GithubService, mock_external_profile_repo: AsyncMock
+) -> None:
+    # --- Setup ---
+    token_data = MagicMock(sub=1)
+    mock_external_profile_repo.get_external_profile_by_user_id.return_value = None
+
+    # --- Execute & Assert ---
+    with pytest.raises(GitHubIntegrationError) as exc:
+        await github_service.generate_all_github_timelines(token_data)
+
+    assert exc.value.details["error"] == "GitHub external profile not found"
