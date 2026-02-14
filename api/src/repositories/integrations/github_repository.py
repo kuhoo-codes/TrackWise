@@ -77,6 +77,14 @@ class GithubRepository:
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
+    async def get_db_repositories(
+        self, external_profile_id: Annotated[int, "Foreign key to ExternalProfile"]
+    ) -> list[GithubRepositoryModel]:
+        """Fetch all GitHub repositories for an external profile from the database."""
+        stmt = select(GithubRepositoryModel).where(GithubRepositoryModel.external_profile_id == external_profile_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
     async def bulk_upsert_repositories(
         self, repos_data: list[Repository], external_profile_id: Annotated[int, "Foreign key to ExternalProfile"]
     ) -> list[GithubRepositoryModel]:
@@ -233,11 +241,3 @@ class GithubRepository:
         )
         await self.db.execute(stmt)
         await self.db.commit()
-
-    async def get_db_repositories(
-        self, external_profile_id: Annotated[int, "Foreign key to ExternalProfile"]
-    ) -> list[GithubRepositoryModel]:
-        """Fetch all GitHub repositories for an external profile from the database."""
-        stmt = select(GithubRepositoryModel).where(GithubRepositoryModel.external_profile_id == external_profile_id)
-        result = await self.db.execute(stmt)
-        return result.scalars().all()
