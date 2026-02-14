@@ -50,7 +50,15 @@ export const TimelineBlock: React.FC<TimelineBlockProps> = ({
             onEditNode(data);
           }}
         >
-          <span className="text-xs font-bold text-gray-700 bg-white/80 px-1.5 py-0.5 rounded border border-gray-200 shadow-sm backdrop-blur-sm hover:text-blue-600">
+          <span
+            className="
+            block max-w-[250px] truncate
+            text-xs font-bold text-gray-700 
+            bg-white/90 px-2 py-0.5 rounded 
+            border border-gray-200 shadow-sm backdrop-blur-sm 
+            hover:text-blue-600
+          "
+          >
             {data.title}
           </span>
         </div>
