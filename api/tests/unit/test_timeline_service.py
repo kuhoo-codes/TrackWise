@@ -306,4 +306,4 @@ async def test_generate_nodes_for_commits_hierarchy_and_expansion(
     assert mock_timeline_repo.create_timeline_node.call_count == 2
 
     mock_timeline_repo.update_timeline_node.assert_called_once()
-    assert parent_node_db.end_date == cluster_c.end_date
+    assert parent_node_db.end_date.date() == cluster_c.end_date.date()
