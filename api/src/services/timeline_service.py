@@ -205,6 +205,12 @@ class TimelineService:
 
                 if ai_result.node_content:
                     node_data = TimelineNodeCreate(**ai_result.node_content.model_dump(), timeline_id=timeline_id)
+                    node_data.start_date = node_data.start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+                    if node_data.end_date is not None:
+                        node_data.end_date = node_data.end_date.replace(
+                            hour=23, minute=59, second=59, microsecond=999999
+                        )
 
                     node_data.github_repo_id = repo_id
                     if node_data.end_date is not None:
