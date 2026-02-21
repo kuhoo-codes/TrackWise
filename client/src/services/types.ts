@@ -111,3 +111,9 @@ export const APIErrorSchema = z.object({
 });
 
 export type APIError = z.infer<typeof APIErrorSchema>;
+
+export const GithubAuthUrlResponseSchema = z.object({
+  authUrl: z.string(),
+});
+
+export type GithubAuthUrlResponse = z.infer<typeof GithubAuthUrlResponseSchema>;

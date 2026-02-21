@@ -2,6 +2,7 @@ import { Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ROUTES } from "@/app/router/routes";
+import { ConnectGithubButton } from "@/features/dashboard/components/connectGithubButton";
 import {
   CreateTimelineModal,
   type CreateTimelineFormValues,
@@ -41,13 +42,16 @@ export const Dashboard: React.FC = () => {
     <div className="max-w-5xl mx-auto px-6 py-10">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">My Timelines</h1>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
-        >
-          <Plus className="w-4 h-4" />
-          Create New
-        </button>
+        <div className="flex items-center gap-3">
+          <ConnectGithubButton />
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+          >
+            <Plus className="w-4 h-4" />
+            Create New
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
