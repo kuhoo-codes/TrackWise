@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Response, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ from src.repositories.integrations.external_profile_repository import ExternalPr
 from src.repositories.integrations.github_repository import GithubRepository
 from src.repositories.user_repository import UserRepository
 from src.routes.timeline import get_timeline_service
-from src.schemas.integrations.github import TokenResponse, GithubAuthUrlResponse
+from src.schemas.integrations.github import GithubAuthUrlResponse
 from src.services.auth_service import AuthService
 from src.services.integrations.analysis.significance_analyzer_service import SignificanceAnalyzerService
 from src.services.integrations.github_service import GithubService
@@ -60,9 +60,10 @@ async def github_callback(
     code: str,
     state: str,
     github_service: Annotated[GithubService, Depends(get_github_service)],
-) -> TokenResponse:
+) -> Response:
     """Handle GitHub OAuth callback"""
-    return await github_service.handle_callback(code, state)
+    await github_service.handle_callback(code, state)
+    return Response(status_code=status.HTTP_200_OK)
 
 
 @router.get("/sync")

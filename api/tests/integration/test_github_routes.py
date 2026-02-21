@@ -92,8 +92,6 @@ def test_github_auth_flow(
 
     # --- Assert ---
     assert response_callback.status_code == 200
-    callback_data = response_callback.json()
-    assert callback_data["access_token"] == "gho_12345_test_token"
 
     mock_httpx_post.assert_awaited_once()
     assert mock_httpx_post.call_args.args[0] == "https://github.com/login/oauth/access_token"
