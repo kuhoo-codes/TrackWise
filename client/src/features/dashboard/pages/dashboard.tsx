@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ROUTES } from "@/app/router/routes";
 import {
@@ -7,48 +7,18 @@ import {
   type CreateTimelineFormValues,
 } from "@/features/dashboard/components/createTimelineModal";
 import { DeleteConfirmationModal } from "@/features/dashboard/components/deleteConfirmationModal";
-import { TimelineService } from "@/services/timeline";
-import type { TimelineSummary, TimelineCreateRequest } from "@/services/types";
-import { useAuth } from "@/shared/hooks/useAuth";
+import { useTimelines } from "@/shared/hooks/useTimelines";
 
 export const Dashboard: React.FC = () => {
-  const { token } = useAuth();
-  const [timelines, setTimelines] = useState<TimelineSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { timelines, isLoading, isDeleting, createTimeline, deleteTimeline } =
+    useTimelines();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [timelineToDelete, setTimelineToDelete] = useState<number | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const fetchTimelines = React.useCallback(async () => {
-    if (!token) return;
-    try {
-      const data = await TimelineService.getTimelines();
-      setTimelines(data);
-    } catch (error) {
-      console.error("Failed to load timelines", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    void fetchTimelines();
-  }, [fetchTimelines]);
 
   const handleCreateTimeline = async (data: CreateTimelineFormValues) => {
-    if (!token) return;
-    try {
-      const payload: TimelineCreateRequest = {
-        title: data.title,
-        description: data.description ?? "",
-        isPublic: data.isPublic,
-        defaultZoomLevel: data.defaultZoomLevel,
-      };
-      await TimelineService.createTimeline(payload);
-      await fetchTimelines();
+    const success = await createTimeline(data);
+    if (success) {
       setIsCreateModalOpen(false);
-    } catch (error) {
-      console.error("Failed to create timeline", error);
     }
   };
 
@@ -59,18 +29,10 @@ export const Dashboard: React.FC = () => {
   };
 
   const confirmDelete = async () => {
-    if (!token || !timelineToDelete) return;
-
-    setIsDeleting(true);
-    try {
-      await TimelineService.deleteTimeline(timelineToDelete);
-      setTimelines((prev) => prev.filter((t) => t.id !== timelineToDelete));
+    if (!timelineToDelete) return;
+    const success = await deleteTimeline(timelineToDelete);
+    if (success) {
       setTimelineToDelete(null);
-    } catch (error) {
-      console.error("Failed to delete timeline", error);
-      alert("Failed to delete timeline");
-    } finally {
-      setIsDeleting(false);
     }
   };
 
