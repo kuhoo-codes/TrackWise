@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "react-hot-toast";
 import type { TimelineNodeFormValues } from "@/features/timeline/components/types";
+import { getErrorMessage } from "@/lib/error";
 import {
   adaptNodeToCreateRequest,
   adaptNodeToUpdateRequest,
@@ -7,14 +9,6 @@ import {
 import { TimelineService } from "@/services/timeline";
 import type { Timeline } from "@/services/types";
 import { useAuth } from "@/shared/hooks/useAuth";
-
-const getErrorMessage = (err: unknown, fallback: string): string => {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "object" && err !== null && "message" in err) {
-    return String((err as { message: unknown }).message);
-  }
-  return fallback;
-};
 
 export const useTimeline = (timelineId: number) => {
   const { token } = useAuth();
@@ -29,11 +23,10 @@ export const useTimeline = (timelineId: number) => {
       setIsLoading(true);
       const data = await TimelineService.getTimeline(timelineId);
       setTimeline(data);
-      setError(null);
     } catch (err: unknown) {
-      const msg = getErrorMessage(err, "Failed to create node");
+      const msg = getErrorMessage(err, "Failed to load timeline.");
       setError(msg);
-      throw err;
+      toast.error(msg, { id: "timeline-fetch-error" });
     } finally {
       setIsLoading(false);
     }
@@ -49,10 +42,12 @@ export const useTimeline = (timelineId: number) => {
       const payload = adaptNodeToCreateRequest(data, timelineId);
       await TimelineService.createNode(payload);
       await fetchTimeline();
+      toast.success("Node created!");
       return true;
     } catch (err: unknown) {
-      const msg = getErrorMessage(err, "Failed to create node");
+      const msg = getErrorMessage(err, "Failed to create node.");
       setError(msg);
+      toast.error(msg);
       throw err;
     }
   };
@@ -63,10 +58,12 @@ export const useTimeline = (timelineId: number) => {
       const payload = adaptNodeToUpdateRequest(data);
       await TimelineService.updateNode(nodeId, payload);
       await fetchTimeline();
+      toast.success("Node updated!");
       return true;
     } catch (err: unknown) {
-      const msg = getErrorMessage(err, "Failed to create node");
+      const msg = getErrorMessage(err, "Failed to update node.");
       setError(msg);
+      toast.error(msg);
       throw err;
     }
   };
@@ -76,10 +73,12 @@ export const useTimeline = (timelineId: number) => {
     try {
       await TimelineService.deleteNode(nodeId);
       await fetchTimeline();
+      toast.success("Node deleted.");
       return true;
     } catch (err: unknown) {
-      const msg = getErrorMessage(err, "Failed to create node");
+      const msg = getErrorMessage(err, "Failed to delete node.");
       setError(msg);
+      toast.error(msg);
       throw err;
     }
   };
