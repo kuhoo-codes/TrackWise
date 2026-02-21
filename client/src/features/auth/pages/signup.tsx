@@ -7,7 +7,7 @@ import type { SignupRequest } from "@/services/types";
 import { useAuth } from "@/shared/hooks/useAuth";
 
 export const Signup: React.FC = () => {
-  const { signup, isLoading, clearError, error } = useAuth();
+  const { signup, isLoading, clearError, errorMessage } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -25,8 +25,8 @@ export const Signup: React.FC = () => {
       {/* Left side - Form (centered) */}
       <div className="w-full lg:w-1/2 bg-gray-100 flex items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-md">
-          {error && (
-            <span className="text-red-500 mb-4 block">{error.message}</span>
+          {errorMessage && (
+            <span className="text-red-500 mb-4 block">{errorMessage}</span>
           )}
           <AuthForm mode="signup" onSubmit={handleSignup} loading={isLoading} />
         </div>

@@ -7,7 +7,7 @@ import type { LoginRequest } from "@/services/types";
 import { useAuth } from "@/shared/hooks/useAuth";
 
 export const Login: React.FC = () => {
-  const { login, isLoading, clearError, error } = useAuth();
+  const { login, isLoading, clearError, errorMessage } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -24,8 +24,8 @@ export const Login: React.FC = () => {
       <div className="w-full lg:w-1/2 bg-gray-100 flex items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-md space-y-4">
           {/* Display error message if exists */}
-          {error && (
-            <span className="text-red-500 mb-4 block">{error.message}</span>
+          {errorMessage && (
+            <span className="text-red-500 mb-4 block">{errorMessage}</span>
           )}
           <AuthForm mode="login" onSubmit={handleLogin} loading={isLoading} />
         </div>

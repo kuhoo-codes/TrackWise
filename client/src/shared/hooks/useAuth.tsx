@@ -5,19 +5,19 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { getErrorMessage } from "@/lib/error";
 import { AuthService } from "@/services/auth";
 import { TokenStorage } from "@/services/tokenStorage";
 import {
   type User,
   type LoginRequest,
   type SignupRequest,
-  type APIError,
 } from "@/services/types";
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
-  error: APIError | null;
+  errorMessage: string | null;
 }
 interface AuthContextType extends AuthState {
   isAuthenticated: boolean;
@@ -35,26 +35,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<AuthState>({
     user: null,
     isLoading: true,
-    error: null,
+    errorMessage: null,
   });
 
   const resetAuthState = () => {
     setState({
       user: null,
       isLoading: false,
-      error: null,
+      errorMessage: null,
     });
-  };
-
-  const handleError = (error: unknown): APIError => {
-    if (isAPIError(error)) {
-      return error;
-    }
-    return {
-      code: "UNKNOWN_ERROR",
-      message:
-        error instanceof Error ? error.message : "An unknown error occurred",
-    };
   };
 
   useEffect(() => {
@@ -71,7 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (error) {
         setState((prev) => ({
           ...prev,
-          error: handleError(error),
+          errorMessage: getErrorMessage(error, "Failed to validate session"),
           user: null,
         }));
         TokenStorage.removeTokens();
@@ -93,16 +82,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setState({
         user: response.user,
         isLoading: false,
-        error: null,
+        errorMessage: null,
       });
     } catch (error) {
-      const normalizedError = handleError(error);
       setState((prev) => ({
         ...prev,
-        error: normalizedError,
+        errorMessage: getErrorMessage(error, "Failed to login"),
         isLoading: false,
       }));
-      throw normalizedError;
+      throw error;
     }
   };
 
@@ -117,16 +105,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setState({
         user: response.user,
         isLoading: false,
-        error: null,
+        errorMessage: null,
       });
     } catch (error) {
-      const normalizedError = handleError(error);
       setState((prev) => ({
         ...prev,
-        error: normalizedError,
+        errorMessage: getErrorMessage(error, "Failed to sign up"),
         isLoading: false,
       }));
-      throw normalizedError;
+      throw error;
     }
   };
 
@@ -140,7 +127,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       TokenStorage.removeTokens();
       resetAuthState();
     } catch (error) {
-      const normalizedError = handleError(error);
+      const normalizedError = getErrorMessage(error, "Failed to logout");
       throw normalizedError;
     }
   };
@@ -156,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user: state.user,
     isAuthenticated: !!state.user,
     isLoading: state.isLoading,
-    error: state.error,
+    errorMessage: state.errorMessage,
     login,
     signup,
     logout,
@@ -167,14 +154,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
-const isAPIError = (error: unknown): error is APIError =>
-  typeof error === "object" &&
-  error !== null &&
-  "code" in error &&
-  "message" in error &&
-  typeof error.code === "string" &&
-  typeof error.message === "string";
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
