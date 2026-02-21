@@ -154,3 +154,7 @@ class Issue(BaseModel):
     created_at: datetime
     updated_at: datetime
     repository: Repository
+
+
+class GithubAuthUrlResponse(BaseModel):
+    authUrl: str

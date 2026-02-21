@@ -12,7 +12,7 @@ from src.repositories.integrations.external_profile_repository import ExternalPr
 from src.repositories.integrations.github_repository import GithubRepository
 from src.repositories.user_repository import UserRepository
 from src.routes.timeline import get_timeline_service
-from src.schemas.integrations.github import TokenResponse
+from src.schemas.integrations.github import TokenResponse, GithubAuthUrlResponse
 from src.services.auth_service import AuthService
 from src.services.integrations.analysis.significance_analyzer_service import SignificanceAnalyzerService
 from src.services.integrations.github_service import GithubService
@@ -48,11 +48,11 @@ async def get_github_auth_url(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
     github_service: Annotated[GithubService, Depends(get_github_service)],
-) -> JSONResponse:
+) -> GithubAuthUrlResponse:
     """Generate GitHub OAuth URL"""
     token_data = auth_service.verify_token(token=credentials.credentials)
     auth_url = await github_service.get_auth_url(token_data.sub)
-    return JSONResponse(content={"authUrl": auth_url})
+    return GithubAuthUrlResponse(authUrl=auth_url)
 
 
 @router.get("/callback")
