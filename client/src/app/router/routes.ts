@@ -7,6 +7,7 @@ export const ROUTES = {
   // Protected routes
   DASHBOARD: "/dashboard",
   TIMELINE: "/timeline",
+  GITHUB_CALLBACK: "/github/callback",
 
   // Error routes
   NOT_FOUND: "/404",

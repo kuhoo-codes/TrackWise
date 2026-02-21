@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate, Link, useParams } from "react-router-dom";
 import { Login, Signup } from "@/features/auth";
 import { Dashboard } from "@/features/dashboard";
+import { GithubCallback } from "@/features/dashboard/pages/githubCallback";
 import { Timeline } from "@/features/timeline/pages/timeline";
 import { Layout } from "@/shared/components/layout/layout";
 import { ProtectedRoute } from "./protectedRoute";
@@ -50,6 +51,17 @@ export const AppRouter: React.FC = () => (
         <ProtectedRoute requireAuth>
           <Layout>
             <Dashboard />
+          </Layout>
+        </ProtectedRoute>
+      }
+    />
+
+    <Route
+      path={ROUTES.GITHUB_CALLBACK}
+      element={
+        <ProtectedRoute requireAuth>
+          <Layout>
+            <GithubCallback />
           </Layout>
         </ProtectedRoute>
       }
