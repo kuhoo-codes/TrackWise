@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import Errors
 from src.db.database import get_db
-from src.exceptions.auth import UserNotFoundError
+from src.exceptions.external import GitHubIntegrationError
 from src.repositories.integrations.external_profile_repository import ExternalProfileRepository
 from src.repositories.integrations.github_repository import GithubRepository
 from src.repositories.user_repository import UserRepository
@@ -81,10 +81,16 @@ async def start_github_sync(
     token_data = auth_service.verify_token(token=credentials.credentials)
     user_id = token_data.sub
 
-    access_token, github_profile = await github_service.get_valid_access_token(user_id)
+    github_profile = await github_service.get_external_profile(user_id)
+    access_token = await github_service.get_valid_access_token(github_profile)
 
-    if not github_profile:
-        raise UserNotFoundError(Errors.USER_NOT_FOUND.value, details={"error": "GitHub external profile not found"})
+    lock_acquired = await github_service.attempt_sync_lock(github_profile.id)
+
+    if not lock_acquired:
+        raise GitHubIntegrationError(
+            Errors.GITHUB_INTEGRATION_ERROR.value,
+            details={"message": "Another sync is already in progress for this profile."},
+        )
 
     background_tasks.add_task(github_service.run_full_sync, access_token=access_token, github_profile=github_profile)
     return OperationStatusResponse(

@@ -120,16 +120,13 @@ class GithubService:
         """Fetch the GitHub ExternalProfile for a given user."""
         return await self.external_profile_repo.get_external_profile_by_user_id(user_id, PlatformEnum.GITHUB)
 
-    async def get_valid_access_token(self, user_id: int) -> tuple[str, ExternalProfile]:
+    async def get_valid_access_token(self, github_profile: ExternalProfile) -> str:
         """Retrieve a valid GitHub access token, refreshing if necessary."""
-        external_profile = await self.external_profile_repo.get_external_profile_by_user_id(
-            user_id, PlatformEnum.GITHUB
-        )
-        if not external_profile:
+        if not github_profile:
             raise GitHubIntegrationError(
                 Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub external profile not found"}
             )
-        expires_at = external_profile.refresh_token_expires_at
+        expires_at = github_profile.refresh_token_expires_at
         if expires_at.tzinfo is None:
             logger.warning("Naive datetime detected for refresh_token_expires_at, assuming UTC.")
             expires_at = expires_at.replace(tzinfo=timezone.utc)
@@ -141,7 +138,7 @@ class GithubService:
             "client_id": settings.GITHUB_CLIENT_ID,
             "client_secret": settings.GITHUB_CLIENT_SECRET,
             "grant_type": "refresh_token",
-            "refresh_token": external_profile.refresh_token,
+            "refresh_token": github_profile.refresh_token,
         }
 
         async with httpx.AsyncClient() as client:
@@ -157,8 +154,8 @@ class GithubService:
             )
 
         github_token = GithubToken(**data)
-        await self.update_external_profile_token(external_profile, github_token)
-        return github_token.access_token, external_profile
+        await self.update_external_profile_token(github_profile, github_token)
+        return github_token.access_token
 
     async def get_auth_user(self, access_token: str) -> User:
         """Fetch authenticated user's GitHub profile."""
