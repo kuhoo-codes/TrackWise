@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 
 from pydantic import BaseModel, model_validator
 from typing_extensions import Self
@@ -158,3 +159,13 @@ class Issue(BaseModel):
 
 class GithubAuthUrlResponse(BaseModel):
     authUrl: str
+
+class OperationStatusEnum(str, Enum):
+    accepted = "accepted"
+    started = "started"
+    queued = "queued"
+
+
+class OperationStatusResponse(BaseModel):
+    message: str
+    status: OperationStatusEnum
