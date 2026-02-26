@@ -14,7 +14,16 @@ from src.models.integrations.github import GithubRepository as GithubRepoModel
 from src.repositories.integrations.external_profile_repository import ExternalProfileRepository
 from src.repositories.integrations.github_repository import GithubRepository
 from src.schemas.integrations.analysis.significance import FileChange
-from src.schemas.integrations.github import Commit, GithubToken, Issue, RepoCommit, Repository, TokenResponse, User
+from src.schemas.integrations.github import (
+    Commit,
+    GithubSyncStatusResponse,
+    GithubToken,
+    Issue,
+    RepoCommit,
+    Repository,
+    TokenResponse,
+    User,
+)
 from src.schemas.timelines import TimelineCreate
 from src.schemas.users import TokenData
 from src.services.integrations.analysis.significance_analyzer_service import SignificanceAnalyzerService
@@ -172,13 +181,29 @@ class GithubService:
             adapter = TypeAdapter(User)
             return adapter.validate_python(response.json())
 
+    async def get_sync_status(self, user_id: int) -> GithubSyncStatusResponse:
+        """Get the current GitHub sync status for a user."""
+        external_profile = await self.get_external_profile(user_id)
+        if not external_profile:
+            return GithubSyncStatusResponse(is_connected=False, sync_status=SyncStatusEnum.IDLE)
+
+        return GithubSyncStatusResponse(
+            is_connected=True,
+            sync_status=external_profile.sync_status,
+            last_synced_at=external_profile.last_synced_at,
+            last_sync_error=external_profile.last_sync_error,
+        )
+
+    async def attempt_sync_lock(self, profile_id: int) -> bool:
+        """Try to acquire a lock for syncing. Returns True if lock acquired, False if already syncing."""
+        return await self.external_profile_repo.attempt_sync_lock(profile_id)
+
     async def run_full_sync(self, access_token: str, github_profile: ExternalProfile) -> None:
         """This is the main function called by the background task."""
         last_step = github_profile.sync_step
         profile_id = github_profile.id
         try:
             logger.info("Starting full sync for GitHub profile ID: {}", profile_id)
-            await self.external_profile_repo.set_sync_status(profile_id, SyncStatusEnum.SYNCING)
             timeout = httpx.Timeout(10.0, connect=5.0, read=30.0, write=10.0)
             headers = {
                 "Accept": "application/vnd.github+json",

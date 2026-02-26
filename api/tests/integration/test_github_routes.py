@@ -169,3 +169,76 @@ def test_start_github_sync_failure(
     assert data["error"]["code"] == "GITHUB_INTEGRATION_ERROR"
     assert data["error"]["message"] == "GitHub integration error"
     assert data["error"]["details"] == {"error": "GitHub external profile not found"}
+
+
+def test_get_github_sync_status_connected(
+    client: TestClient,
+    auth_helper: AuthHelper,
+) -> None:
+    """Test retrieving sync status for a connected user."""
+    # --- Setup ---
+    appa_headers = auth_helper.get_auth_headers("appa")
+    mock_at = "2025-11-13T00:00:00Z"
+
+    mock_status_response = {
+        "is_connected": True,
+        "sync_status": "completed",
+        "last_synced_at": mock_at,
+        "last_sync_error": None,
+    }
+
+    with patch(
+        "src.services.integrations.github_service.GithubService.get_sync_status", new_callable=AsyncMock
+    ) as mock_get_status:
+        mock_get_status.return_value = mock_status_response
+
+        # --- Execute ---
+        response = client.get("/integrations/github/sync-status", headers=appa_headers)
+        data = response.json()
+
+        # --- Assert ---
+        assert response.status_code == 200
+        assert data["is_connected"] is True
+        assert data["sync_status"] == "completed"
+
+
+def test_get_github_sync_status_not_connected(
+    client: TestClient,
+    auth_helper: AuthHelper,
+) -> None:
+    """Test retrieving sync status for a user who hasn't connected GitHub yet."""
+    # --- Setup ---
+    momo_headers = auth_helper.get_auth_headers("momo")
+
+    mock_status_response = {
+        "is_connected": False,
+        "sync_status": "idle",
+        "last_synced_at": None,
+        "last_sync_error": None,
+    }
+
+    with patch(
+        "src.services.integrations.github_service.GithubService.get_sync_status", new_callable=AsyncMock
+    ) as mock_get_status:
+        mock_get_status.return_value = mock_status_response
+
+        # --- Execute ---
+        response = client.get("/integrations/github/sync-status", headers=momo_headers)
+        data = response.json()
+
+        # --- Assert ---
+        assert response.status_code == 200
+        assert data["is_connected"] is False
+        assert data["sync_status"] == "idle"
+        assert data["last_synced_at"] is None
+
+
+def test_get_github_sync_status_unauthorized(
+    client: TestClient,
+) -> None:
+    """Test that the endpoint requires a valid auth token."""
+    # --- Execute ---
+    response = client.get("/integrations/github/sync-status")
+
+    # --- Assert ---
+    assert response.status_code == 403

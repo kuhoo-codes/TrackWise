@@ -14,6 +14,7 @@ from src.repositories.user_repository import UserRepository
 from src.routes.timeline import get_timeline_service
 from src.schemas.integrations.github import (
     GithubAuthUrlResponse,
+    GithubSyncStatusResponse,
     OperationStatusEnum,
     OperationStatusResponse,
 )
@@ -97,6 +98,19 @@ async def start_github_sync(
         message="GitHub synchronization has been started.",
         status=OperationStatusEnum.accepted,
     )
+
+
+@router.get("/sync-status")
+async def get_github_sync_status(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    github_service: Annotated[GithubService, Depends(get_github_service)],
+) -> GithubSyncStatusResponse:
+    """Get current GitHub sync status for the user"""
+    token_data = auth_service.verify_token(token=credentials.credentials)
+    user_id = token_data.sub
+
+    return await github_service.get_sync_status(user_id)
 
 
 @router.post("/sync-timelines", status_code=202)

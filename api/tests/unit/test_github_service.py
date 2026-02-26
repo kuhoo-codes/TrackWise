@@ -5,7 +5,8 @@ import pytest
 
 from src.exceptions.external import GitHubIntegrationError
 from src.models.integrations import ExternalProfile, PlatformEnum
-from src.schemas.integrations.github import GithubToken, RepoCommit, TokenResponse, User
+from src.models.integrations.external_profiles import SyncStatusEnum
+from src.schemas.integrations.github import GithubSyncStatusResponse, GithubToken, RepoCommit, TokenResponse, User
 from src.services.integrations.github_service import GithubService
 
 
@@ -340,7 +341,7 @@ async def test_get_valid_access_token_missing_profile(
     """Test error when external profile not found."""
     mock_external_profile_repo.get_external_profile_by_user_id.return_value = None
     with pytest.raises(GitHubIntegrationError):
-        await github_service.get_valid_access_token(1)
+        await github_service.get_valid_access_token(None)
 
 
 @pytest.mark.asyncio
@@ -523,3 +524,76 @@ async def test_generate_all_github_timelines_no_profile(
         await github_service.generate_all_github_timelines(token_data)
 
     assert exc.value.details["error"] == "GitHub external profile not found"
+
+
+@pytest.mark.asyncio
+async def test_get_sync_status_not_connected(
+    github_service: GithubService,
+) -> None:
+    """Test get_sync_status when no external profile exists for the user."""
+    # --- Setup ---
+    user_id = 123
+    # patch the internal helper method
+    with patch.object(github_service, "get_external_profile", return_value=None):
+        # --- Execute ---
+        result = await github_service.get_sync_status(user_id)
+
+        # --- Assert ---
+        assert isinstance(result, GithubSyncStatusResponse)
+        assert result.is_connected is False
+        assert result.sync_status == SyncStatusEnum.IDLE
+
+
+@pytest.mark.asyncio
+async def test_get_sync_status_connected(
+    github_service: GithubService,
+) -> None:
+    """Test get_sync_status when the user is connected."""
+    # --- Setup ---
+    user_id = 123
+    mock_at = datetime.now(timezone.utc)
+    mock_profile = MagicMock(spec=ExternalProfile)
+    mock_profile.sync_status = SyncStatusEnum.COMPLETED
+    mock_profile.last_synced_at = mock_at
+    mock_profile.last_sync_error = None
+
+    with patch.object(github_service, "get_external_profile", return_value=mock_profile):
+        # --- Execute ---
+        result = await github_service.get_sync_status(user_id)
+
+        # --- Assert ---
+        assert result.is_connected is True
+        assert result.sync_status == SyncStatusEnum.COMPLETED
+        assert result.last_synced_at == mock_at
+        assert result.last_sync_error is None
+
+
+@pytest.mark.asyncio
+async def test_attempt_sync_lock_success(github_service: GithubService, mock_external_profile_repo: AsyncMock) -> None:
+    """Test successfully acquiring a sync lock."""
+    # --- Setup ---
+    profile_id = 50
+    mock_external_profile_repo.attempt_sync_lock.return_value = True
+
+    # --- Execute ---
+    result = await github_service.attempt_sync_lock(profile_id)
+
+    # --- Assert ---
+    mock_external_profile_repo.attempt_sync_lock.assert_called_once_with(profile_id)
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_attempt_sync_lock_already_locked(
+    github_service: GithubService, mock_external_profile_repo: AsyncMock
+) -> None:
+    """Test failing to acquire a lock because a sync is already in progress."""
+    # --- Setup ---
+    profile_id = 50
+    mock_external_profile_repo.attempt_sync_lock.return_value = False
+
+    # --- Execute ---
+    result = await github_service.attempt_sync_lock(profile_id)
+
+    # --- Assert ---
+    assert result is False
