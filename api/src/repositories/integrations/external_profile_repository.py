@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from sqlalchemy import select, update
@@ -34,6 +34,36 @@ class ExternalProfileRepository:
         await self.db.commit()
         await self.db.refresh(updated)
         return updated
+
+    async def attempt_sync_lock(
+        self,
+        profile_id: Annotated[int, "The ID of the external profile to lock for synchronization"],
+    ) -> bool:
+        """
+        Atomically tries to set status to SYNCING.
+        Returns True if successful, False if it was already syncing.
+        """
+        now = datetime.now(timezone.utc)
+        stale_threshold = now - timedelta(minutes=15)
+
+        # ATOMIC UPDATE: "Set to SYNCING *ONLY IF* it is currently not syncing,
+        # OR if it's been syncing for more than 15 minutes (stale)."
+        stmt = (
+            update(ExternalProfile)
+            .where(
+                ExternalProfile.id == profile_id,
+                (ExternalProfile.sync_status != SyncStatusEnum.SYNCING)
+                | (ExternalProfile.last_sync_attempt_at < stale_threshold),
+            )
+            .values(
+                sync_status=SyncStatusEnum.SYNCING,
+                last_sync_error=None,
+                last_sync_attempt_at=datetime.now(timezone.utc),
+            )
+        )
+        result = await self.db.execute(stmt)
+        await self.db.commit()
+        return result.rowcount > 0
 
     async def set_sync_status(
         self,

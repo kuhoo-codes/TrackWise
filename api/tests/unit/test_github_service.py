@@ -316,7 +316,6 @@ async def test_get_valid_access_token_refresh_success(
         platform=PlatformEnum.GITHUB,
     )
 
-    mock_external_profile_repo.get_external_profile_by_user_id.return_value = external_profile
     mock_response = MagicMock()
     mock_response.json.return_value = {
         "access_token": "new_access",
@@ -329,10 +328,9 @@ async def test_get_valid_access_token_refresh_success(
     mock_client.return_value.__aenter__.return_value.post.return_value = mock_response
     mock_external_profile_repo.update_external_profile.return_value = external_profile
 
-    token, profile = await github_service.get_valid_access_token(1)
+    token = await github_service.get_valid_access_token(external_profile)
 
     assert token == "new_access"
-    assert profile == external_profile
 
 
 @pytest.mark.asyncio
