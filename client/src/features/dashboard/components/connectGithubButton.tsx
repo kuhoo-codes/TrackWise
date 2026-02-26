@@ -1,5 +1,6 @@
-import { CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
 import React from "react";
+import { SYNC_STATUS } from "@/services/types";
 import { useGithubConnect } from "@/shared/hooks/useGithubConnect";
 
 const GithubInvertocat = ({ className }: { className?: string }) => (
@@ -14,32 +15,81 @@ const GithubInvertocat = ({ className }: { className?: string }) => (
 );
 
 export const ConnectGithubButton: React.FC = () => {
-  const { isConnected, isRedirecting, redirectToGithub } = useGithubConnect();
+  const {
+    isConnected,
+    isRedirecting,
+    redirectToGithub,
+    syncStatus,
+    lastSyncedAt,
+    triggerSync,
+  } = useGithubConnect();
+  const formattedLastSynced = lastSyncedAt
+    ? new Date(lastSyncedAt).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "Never";
+
+  if (!isConnected) {
+    return (
+      <button
+        onClick={() => void redirectToGithub()}
+        disabled={isRedirecting}
+        className="flex items-center gap-2 bg-[#24292F] text-white px-4 py-2 rounded-lg hover:bg-[#24292F]/90 transition-all font-medium text-sm disabled:opacity-70 disabled:cursor-not-allowed"
+      >
+        {isRedirecting ? (
+          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        ) : (
+          <GithubInvertocat className="w-5 h-5" />
+        )}
+        <span>{isRedirecting ? "Connecting..." : "Connect GitHub"}</span>
+      </button>
+    );
+  }
 
   return (
-    <div className="flex flex-col items-end">
-      {isConnected ? (
-        <button
-          disabled
-          className="flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-lg font-medium text-sm cursor-default"
-        >
-          <CheckCircle2 className="w-5 h-5" />
-          <span>Connected to GitHub</span>
-        </button>
-      ) : (
-        <button
-          onClick={() => void redirectToGithub()}
-          disabled={isRedirecting}
-          className="flex items-center gap-2 bg-[#24292F] text-white px-4 py-2 rounded-lg hover:bg-[#24292F]/90 transition-all font-medium text-sm disabled:opacity-70 disabled:cursor-not-allowed"
-        >
-          {isRedirecting ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            <GithubInvertocat className="w-5 h-5" />
-          )}
-          <span>{isRedirecting ? "Connecting..." : "Connect GitHub"}</span>
-        </button>
-      )}
+    <div className="flex items-center gap-4">
+      {/* Small Connected Badge */}
+      <div className="flex flex-col items-end gap-1">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1.5 rounded-md border border-green-200">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          Connected
+        </div>
+        <span className="text-[10px] text-gray-400 font-medium tracking-wide">
+          Last synced: {formattedLastSynced}
+        </span>
+      </div>
+
+      {/* Sync Button */}
+      <button
+        onClick={() => void triggerSync()}
+        disabled={syncStatus === SYNC_STATUS.SYNCING}
+        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all border ${
+          syncStatus === SYNC_STATUS.FAILED
+            ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+            : syncStatus === SYNC_STATUS.SYNCING
+              ? "bg-blue-50 text-blue-700 border-blue-200 cursor-not-allowed"
+              : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 shadow-sm"
+        }`}
+      >
+        {syncStatus === SYNC_STATUS.SYNCING ? (
+          <>
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            <span>Syncing Data...</span>
+          </>
+        ) : syncStatus === SYNC_STATUS.FAILED ? (
+          <>
+            <AlertTriangle className="w-4 h-4" />
+            <span>Retry Sync</span>
+          </>
+        ) : (
+          <>
+            <RefreshCw className="w-4 h-4" />
+            <span>Sync Repos</span>
+          </>
+        )}
+      </button>
     </div>
   );
 };

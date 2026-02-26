@@ -85,3 +85,10 @@ export interface ApiTimelineNodeUpdateRequest {
   github_repo_id?: number;
   github_pr_id?: number;
 }
+
+export interface ApiGithubSyncStatus {
+  is_connected: boolean;
+  sync_status: string;
+  last_synced_at: string | null;
+  last_sync_error: string | null;
+}
