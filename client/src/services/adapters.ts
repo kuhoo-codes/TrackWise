@@ -8,6 +8,7 @@ import type {
   ApiTimelineNodeCreateRequest,
   ApiTimelineNodeUpdateRequest,
   ApiTimelineCreateRequest,
+  ApiGithubSyncStatus,
 } from "@/services/apiTypes";
 import {
   NODE_TYPES,
@@ -20,6 +21,8 @@ import {
   type NodeType,
   type DateGranularity,
   type TimelineCreateRequest,
+  type GithubSyncStatus,
+  type SyncStatus,
 } from "@/services/types";
 
 export const adaptUser = (data: ApiUser): User => ({
@@ -140,4 +143,13 @@ export const adaptNodeToUpdateRequest = (
   description: data.description || undefined,
   private_notes: data.privateNotes || undefined,
   date_granularity: DATE_GRANULARITY.EXACT,
+});
+
+export const adaptGithubSyncStatus = (
+  data: ApiGithubSyncStatus,
+): GithubSyncStatus => ({
+  isConnected: data.is_connected,
+  syncStatus: data.sync_status as SyncStatus,
+  lastSyncedAt: data.last_synced_at ? new Date(data.last_synced_at) : null,
+  lastSyncError: data.last_sync_error,
 });

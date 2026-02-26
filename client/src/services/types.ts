@@ -117,3 +117,22 @@ export const GithubAuthUrlResponseSchema = z.object({
 });
 
 export type GithubAuthUrlResponse = z.infer<typeof GithubAuthUrlResponseSchema>;
+
+export const SYNC_STATUS = {
+  IDLE: "idle",
+  SYNCING: "syncing",
+  COMPLETED: "completed",
+  FAILED: "failed",
+} as const;
+
+const SyncStatusSchema = z.nativeEnum(SYNC_STATUS);
+export type SyncStatus = z.infer<typeof SyncStatusSchema>;
+
+export const GithubSyncStatusSchema = z.object({
+  isConnected: z.boolean(),
+  syncStatus: SyncStatusSchema,
+  lastSyncedAt: z.coerce.date().nullable(),
+  lastSyncError: z.string().nullable(),
+});
+
+export type GithubSyncStatus = z.infer<typeof GithubSyncStatusSchema>;
