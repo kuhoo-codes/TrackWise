@@ -4,6 +4,7 @@ from enum import Enum
 from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
+from src.models.integrations.external_profiles import SyncStatusEnum
 from src.schemas.integrations.analysis.significance import SignificanceLevel
 
 
@@ -159,6 +160,14 @@ class Issue(BaseModel):
 
 class GithubAuthUrlResponse(BaseModel):
     authUrl: str
+
+
+class GithubSyncStatusResponse(BaseModel):
+    is_connected: bool
+    sync_status: SyncStatusEnum
+    last_synced_at: datetime | None = None
+    last_sync_error: str | None = None
+
 
 class OperationStatusEnum(str, Enum):
     accepted = "accepted"
