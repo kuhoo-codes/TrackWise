@@ -579,7 +579,7 @@ async def test_attempt_sync_lock_success(github_service: GithubService, mock_ext
     result = await github_service.attempt_sync_lock(profile_id)
 
     # --- Assert ---
-    mock_external_profile_repo.attempt_sync_lock.assert_called_once_with(profile_id)
+    mock_external_profile_repo.attempt_sync_lock.assert_called_once_with(profile_id, PlatformEnum.GITHUB)
     assert result is True
 
 

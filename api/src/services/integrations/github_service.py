@@ -196,7 +196,7 @@ class GithubService:
 
     async def attempt_sync_lock(self, profile_id: int) -> bool:
         """Try to acquire a lock for syncing. Returns True if lock acquired, False if already syncing."""
-        return await self.external_profile_repo.attempt_sync_lock(profile_id)
+        return await self.external_profile_repo.attempt_sync_lock(profile_id, PlatformEnum.GITHUB)
 
     async def run_full_sync(self, access_token: str, github_profile: ExternalProfile) -> None:
         """This is the main function called by the background task."""
