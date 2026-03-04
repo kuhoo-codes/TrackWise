@@ -126,7 +126,6 @@ class CommitInDB(BaseModel):
 
 class Repository(BaseModel):
     id: int
-    fork: bool
     name: str
     full_name: str
     description: str | None
