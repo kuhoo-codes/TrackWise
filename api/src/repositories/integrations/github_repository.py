@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from sqlalchemy import select, update
@@ -10,6 +10,7 @@ from src.core.redis_utils import redis_get, redis_set
 from src.exceptions.external import GitHubIntegrationError
 from src.models.integrations.github import GithubCommit, GithubIssue
 from src.models.integrations.github import GithubRepository as GithubRepositoryModel
+from src.models.integrations.github.github_repositories import GenerationStatusEnum
 from src.schemas.integrations.github import Commit, GithubToken, Issue, Repository, StateRecord
 
 
@@ -85,11 +86,45 @@ class GithubRepository:
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
-    async def get_repository_by_id(self, repo_id: int) -> GithubRepositoryModel:
-        """Fetch a GitHub repository by ID from the database."""
-        stmt = select(GithubRepositoryModel).where(GithubRepositoryModel.id == repo_id)
+    async def get_repositories_by_ids(
+        self, external_profile_id: int, repo_ids: list[int]
+    ) -> list[GithubRepositoryModel]:
+        """Fetch multiple GitHub repositories by their IDs from the database."""
+        stmt = select(GithubRepositoryModel).where(
+            GithubRepositoryModel.id.in_(repo_ids), GithubRepositoryModel.external_profile_id == external_profile_id
+        )
         result = await self.db.execute(stmt)
-        return result.scalars().first()
+        return result.scalars().all()
+
+    async def lock_repos_for_timeline_generation(self, repo_ids: list[int]) -> list[int]:
+        """
+        Atomically locks repositories for timeline generation.
+        Returns the list of repo IDs that were successfully locked.
+        Ignores any repos that are already in the process of generating.
+        """
+        if not repo_ids:
+            return []
+
+        now = datetime.now(timezone.utc)
+        stale_threshold = now - timedelta(minutes=30)
+
+        stmt = (
+            update(GithubRepositoryModel)
+            .where(
+                GithubRepositoryModel.id.in_(repo_ids),
+                # Only lock them if they are NOT generating right now,
+                # OR if they have been stuck generating for over 30 minutes
+                (GithubRepositoryModel.generation_status != GenerationStatusEnum.GENERATING)
+                | (GithubRepositoryModel.last_generation_attempt_at < stale_threshold),
+            )
+            .values(generation_status=GenerationStatusEnum.GENERATING, last_generation_attempt_at=now)
+            .returning(GithubRepositoryModel.id)
+        )
+
+        result = await self.db.execute(stmt)
+        await self.db.commit()
+
+        return list(result.scalars().all())
 
     async def bulk_upsert_repositories(
         self, repos_data: list[Repository], external_profile_id: Annotated[int, "Foreign key to ExternalProfile"]

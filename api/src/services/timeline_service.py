@@ -1,6 +1,7 @@
 from loguru import logger
 
 from src.core.config import Errors
+from src.exceptions.ai import AIServiceError
 from src.exceptions.timeline import InvalidTimelineNodeError, TimelineNodeNotFoundError, TimelineNotFoundError
 from src.models.timeline_nodes import TimelineNode
 from src.models.timelines import Timeline
@@ -239,7 +240,15 @@ class TimelineService:
 
             except Exception as e:
                 logger.error(f"Failed to process cluster {cluster.id} for timeline {timeline_id}: {str(e)}")
-                continue
+                raise AIServiceError(
+                    message="Failed to generate timeline nodes via AI.",
+                    details={
+                        "repo_id": repo_id,
+                        "timeline_id": timeline_id,
+                        "cluster_id": cluster.id,
+                        "original_error": str(e),
+                    },
+                ) from e
         logger.success(f"Timeline generation complete for repository ID: {repo_id}")
 
     # Helper Validation Methods

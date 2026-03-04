@@ -1,7 +1,6 @@
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Response, status
-from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -126,21 +125,30 @@ async def get_github_sync_status(
     return await github_service.get_sync_status(user_id)
 
 
-@router.post("/sync-timelines", status_code=202)
+@router.post("/timelines", status_code=202)
 async def sync_github_timelines(
+    repository_ids: list[int],
     background_tasks: BackgroundTasks,
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
     github_service: Annotated[GithubService, Depends(get_github_service)],
-) -> JSONResponse:
+) -> OperationStatusResponse:
     """
     Triggers the creation of timelines and nodes from all GitHub repositories of the user.
     """
     token_data = auth_service.verify_token(token=credentials.credentials)
+    locked_repo_ids = await github_service.repo.lock_repos_for_timeline_generation(repository_ids)
 
-    # We run this in the background to avoid timing out the HTTP request
-    background_tasks.add_task(github_service.generate_all_github_timelines, token_data=token_data)
-    return JSONResponse(
-        status_code=202,
-        content={"message": "Timeline generation for all repositories started in the background."},
+    if not locked_repo_ids:
+        return OperationStatusResponse(
+            message="All selected repositories are currently being processed.",
+            status=OperationStatusEnum.queued,
+        )
+
+    background_tasks.add_task(
+        github_service.generate_github_timelines, token_data=token_data, repository_ids=locked_repo_ids
+    )
+    return OperationStatusResponse(
+        message="Timeline generation for all repositories started in the background.",
+        status=OperationStatusEnum.accepted,
     )
