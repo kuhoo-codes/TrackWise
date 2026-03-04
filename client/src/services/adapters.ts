@@ -9,6 +9,7 @@ import type {
   ApiTimelineNodeUpdateRequest,
   ApiTimelineCreateRequest,
   ApiGithubSyncStatus,
+  ApiGithubRepository,
 } from "@/services/apiTypes";
 import {
   NODE_TYPES,
@@ -23,6 +24,7 @@ import {
   type TimelineCreateRequest,
   type GithubSyncStatus,
   type SyncStatus,
+  type GithubRepository,
 } from "@/services/types";
 
 export const adaptUser = (data: ApiUser): User => ({
@@ -152,4 +154,13 @@ export const adaptGithubSyncStatus = (
   syncStatus: data.sync_status as SyncStatus,
   lastSyncedAt: data.last_synced_at ? new Date(data.last_synced_at) : null,
   lastSyncError: data.last_sync_error,
+});
+
+export const adaptGithubRepository = (
+  data: ApiGithubRepository,
+): GithubRepository => ({
+  id: data.id,
+  fullName: data.full_name,
+  htmlUrl: data.html_url,
+  updatedAt: new Date(data.updated_at),
 });

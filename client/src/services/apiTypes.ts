@@ -92,3 +92,10 @@ export interface ApiGithubSyncStatus {
   last_synced_at: string | null;
   last_sync_error: string | null;
 }
+
+export interface ApiGithubRepository {
+  id: number;
+  full_name: string;
+  html_url: string;
+  updated_at: string;
+}
