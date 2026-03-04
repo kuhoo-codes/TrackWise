@@ -38,6 +38,7 @@ class ExternalProfileRepository:
     async def attempt_sync_lock(
         self,
         profile_id: Annotated[int, "The ID of the external profile to lock for synchronization"],
+        platform: Annotated[PlatformEnum, "The platform of the external profile being synchronized"],
     ) -> bool:
         """
         Atomically tries to set status to SYNCING.
@@ -52,6 +53,7 @@ class ExternalProfileRepository:
             update(ExternalProfile)
             .where(
                 ExternalProfile.id == profile_id,
+                ExternalProfile.platform == platform,
                 (ExternalProfile.sync_status != SyncStatusEnum.SYNCING)
                 | (ExternalProfile.last_sync_attempt_at < stale_threshold),
             )
