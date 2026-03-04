@@ -1,7 +1,11 @@
 import { handleServiceError } from "@/lib/error";
-import { adaptGithubSyncStatus } from "./adapters";
+import { adaptGithubRepository, adaptGithubSyncStatus } from "./adapters";
 import { api } from "./api";
-import { type GithubAuthUrlResponse, type GithubSyncStatus } from "./types";
+import {
+  type GithubAuthUrlResponse,
+  type GithubSyncStatus,
+  type GithubRepository,
+} from "./types";
 
 export class GithubService {
   static async getAuthUrl(): Promise<string> {
@@ -37,6 +41,23 @@ export class GithubService {
   static async startSync(): Promise<void> {
     try {
       await api.get(`/integrations/github/sync`);
+    } catch (error) {
+      throw handleServiceError(error);
+    }
+  }
+
+  static async getRepositories(): Promise<GithubRepository[]> {
+    try {
+      const response = await api.get(`/integrations/github/repositories`);
+      return response.data.map(adaptGithubRepository);
+    } catch (error) {
+      throw handleServiceError(error);
+    }
+  }
+
+  static async generateTimelines(repositoryIds: number[]): Promise<void> {
+    try {
+      await api.post(`/integrations/github/timelines`, repositoryIds);
     } catch (error) {
       throw handleServiceError(error);
     }

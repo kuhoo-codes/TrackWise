@@ -1,20 +1,41 @@
-import { Plus, Trash2 } from "lucide-react";
-import React, { useState } from "react";
+import { Plus, Trash2, ChevronDown, Github, Clock } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ROUTES } from "@/app/router/routes";
 import { ConnectGithubButton } from "@/features/dashboard/components/connectGithubButton";
+import { CreateFromGithubModal } from "@/features/dashboard/components/createFromGithubModal";
 import {
   CreateTimelineModal,
   type CreateTimelineFormValues,
 } from "@/features/dashboard/components/createTimelineModal";
 import { DeleteConfirmationModal } from "@/features/dashboard/components/deleteConfirmationModal";
+import { useGithubConnect } from "@/shared/hooks/useGithubConnect";
 import { useTimelines } from "@/shared/hooks/useTimelines";
 
 export const Dashboard: React.FC = () => {
   const { timelines, isLoading, isDeleting, createTimeline, deleteTimeline } =
     useTimelines();
+  const { isConnected } = useGithubConnect(); // Check if GitHub is connected
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isGithubModalOpen, setIsGithubModalOpen] = useState(false); // <-- New state
   const [timelineToDelete, setTimelineToDelete] = useState<number | null>(null);
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleCreateTimeline = async (data: CreateTimelineFormValues) => {
     const success = await createTimeline(data);
@@ -44,13 +65,52 @@ export const Dashboard: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900">My Timelines</h1>
         <div className="flex items-center gap-3">
           <ConnectGithubButton />
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
-          >
-            <Plus className="w-4 h-4" />
-            Create New
-          </button>
+
+          {/* --- DROPDOWN BUTTON --- */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create New</span>
+              <ChevronDown
+                className={`w-4 h-4 opacity-70 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                <div className="p-1">
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setIsCreateModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-left"
+                  >
+                    <Clock className="w-4 h-4 text-gray-400" />
+                    Empty Timeline
+                  </button>
+
+                  {/* Only show GitHub option if they have connected their profile */}
+                  {isConnected && (
+                    <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setIsGithubModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-left border-t border-gray-100"
+                    >
+                      <Github className="w-4 h-4 text-gray-400" />
+                      From GitHub Repos
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          {/* --- END DROPDOWN --- */}
         </div>
       </div>
 
@@ -103,6 +163,11 @@ export const Dashboard: React.FC = () => {
         isOpen={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
         onSubmit={handleCreateTimeline}
+      />
+
+      <CreateFromGithubModal
+        isOpen={isGithubModalOpen}
+        onOpenChange={setIsGithubModalOpen}
       />
 
       <DeleteConfirmationModal

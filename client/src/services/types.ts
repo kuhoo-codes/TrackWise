@@ -136,3 +136,12 @@ export const GithubSyncStatusSchema = z.object({
 });
 
 export type GithubSyncStatus = z.infer<typeof GithubSyncStatusSchema>;
+
+export const GithubRepositorySchema = z.object({
+  id: z.number(),
+  fullName: z.string(),
+  htmlUrl: z.string(),
+  updatedAt: z.coerce.date(),
+});
+
+export type GithubRepository = z.infer<typeof GithubRepositorySchema>;
