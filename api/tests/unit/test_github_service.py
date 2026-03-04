@@ -597,3 +597,47 @@ async def test_attempt_sync_lock_already_locked(
 
     # --- Assert ---
     assert result is False
+
+
+@pytest.mark.asyncio
+async def test_get_all_repositories_success(
+    github_service: GithubService,
+    mock_github_repo: AsyncMock,
+) -> None:
+    # --- Setup ---
+    user_id = 123
+    profile_id = 999
+
+    # Mock external profile
+    mock_profile = MagicMock()
+    mock_profile.id = profile_id
+
+    # Patch internal method
+    with patch.object(github_service, "get_external_profile", return_value=mock_profile):
+        # Mock repo return
+        mock_repos = [MagicMock(), MagicMock()]
+        mock_github_repo.get_db_repositories.return_value = mock_repos
+
+        # --- Execute ---
+        result = await github_service.get_all_repositories(user_id)
+
+        # --- Assert ---
+        github_service.get_external_profile.assert_called_once_with(user_id)
+        mock_github_repo.get_db_repositories.assert_called_once_with(profile_id)
+        assert result == mock_repos
+        assert len(result) == 2
+
+
+@pytest.mark.asyncio
+async def test_get_all_repositories_no_external_profile(
+    github_service: GithubService,
+) -> None:
+    # --- Setup ---
+    user_id = 123
+
+    with patch.object(github_service, "get_external_profile", return_value=None):
+        # --- Execute & Assert ---
+        with pytest.raises(GitHubIntegrationError) as exc:
+            await github_service.get_all_repositories(user_id)
+
+        assert exc.value.details["error"] == "GitHub external profile not found"

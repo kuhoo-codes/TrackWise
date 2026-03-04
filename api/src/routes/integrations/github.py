@@ -17,6 +17,7 @@ from src.schemas.integrations.github import (
     GithubSyncStatusResponse,
     OperationStatusEnum,
     OperationStatusResponse,
+    RepositoryInDB,
 )
 from src.services.auth_service import AuthService
 from src.services.integrations.analysis.significance_analyzer_service import SignificanceAnalyzerService
@@ -69,6 +70,18 @@ async def github_callback(
     """Handle GitHub OAuth callback"""
     await github_service.handle_callback(code, state)
     return Response(status_code=status.HTTP_200_OK)
+
+
+@router.get("/repositories")
+async def get_github_repositories(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    github_service: Annotated[GithubService, Depends(get_github_service)],
+) -> list[RepositoryInDB]:
+    """Get all GitHub repositories for the user"""
+    token_data = auth_service.verify_token(token=credentials.credentials)
+    user_id = token_data.sub
+    return await github_service.get_all_repositories(user_id)
 
 
 @router.get("/sync")
