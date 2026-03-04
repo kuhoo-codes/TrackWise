@@ -242,3 +242,108 @@ def test_get_github_sync_status_unauthorized(
 
     # --- Assert ---
     assert response.status_code == 403
+
+
+def test_get_github_repositories_success(
+    client: TestClient,
+    auth_helper: AuthHelper,
+) -> None:
+    """Test retrieving GitHub repositories successfully."""
+
+    appa_headers = auth_helper.get_auth_headers("appa")
+    appa_id = auth_helper.get_predefined_user("appa")["user"]["id"]
+
+    mock_repos = [
+        {
+            "id": 1,
+            "name": "repo-one",
+            "full_name": "appa/repo-one",
+            "description": "First test repository",
+            "html_url": "https://github.com/appa/repo-one",
+            "language": "Python",
+            "stargazers_count": 10,
+            "forks_count": 2,
+            "external_profile_id": 101,
+            "github_repo_id": 987654,
+            "is_fork": False,
+            "repo_created_at": "2024-01-01T00:00:00Z",
+            "repo_updated_at": "2024-02-01T00:00:00Z",
+            "generation_status": "idle",
+        },
+        {
+            "id": 2,
+            "name": "repo-two",
+            "full_name": "appa/repo-two",
+            "description": "Second test repository",
+            "html_url": "https://github.com/appa/repo-two",
+            "language": "TypeScript",
+            "stargazers_count": 5,
+            "forks_count": 1,
+            "external_profile_id": 101,
+            "github_repo_id": 123456,
+            "is_fork": True,
+            "repo_created_at": "2023-06-10T00:00:00Z",
+            "repo_updated_at": "2023-07-15T00:00:00Z",
+            "generation_status": "completed",
+        },
+    ]
+
+    with patch(
+        "src.services.integrations.github_service.GithubService.get_all_repositories",
+        new_callable=AsyncMock,
+    ) as mock_get_repos:
+        mock_get_repos.return_value = mock_repos
+
+        response = client.get(
+            "/integrations/github/repositories",
+            headers=appa_headers,
+        )
+
+        data = response.json()
+
+        assert response.status_code == 200
+        assert isinstance(data, list)
+        assert len(data) == 2
+        assert data[0]["name"] == "repo-one"
+        assert data[1]["is_fork"] is True
+
+        mock_get_repos.assert_awaited_once_with(appa_id)
+
+
+def test_get_github_repositories_empty(
+    client: TestClient,
+    auth_helper: AuthHelper,
+) -> None:
+    """Test retrieving repositories when none exist."""
+
+    appa_headers = auth_helper.get_auth_headers("appa")
+    appa_id = auth_helper.get_predefined_user("appa")["user"]["id"]
+
+    with patch(
+        "src.services.integrations.github_service.GithubService.get_all_repositories",
+        new_callable=AsyncMock,
+    ) as mock_get_repos:
+        mock_get_repos.return_value = []
+
+        response = client.get(
+            "/integrations/github/repositories",
+            headers=appa_headers,
+        )
+
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data == []
+
+        mock_get_repos.assert_awaited_once_with(appa_id)
+
+
+def test_get_github_repositories_unauthorized(
+    client: TestClient,
+) -> None:
+    """Test endpoint requires authentication."""
+
+    response = client.get("/integrations/github/repositories")
+
+    assert response.status_code == 403
+

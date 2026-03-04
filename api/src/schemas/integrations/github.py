@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 from typing_extensions import Self
 
 from src.models.integrations.external_profiles import SyncStatusEnum
@@ -124,7 +124,7 @@ class CommitInDB(BaseModel):
         from_attributes = True
 
 
-class Repository(BaseModel):
+class RepositoryBase(BaseModel):
     id: int
     name: str
     full_name: str
@@ -133,10 +133,25 @@ class Repository(BaseModel):
     language: str | None
     stargazers_count: int
     forks_count: int
+
+
+class Repository(RepositoryBase):
     fork: bool
     created_at: datetime
     updated_at: datetime
-    commits: list[Commit] | None = None
+
+
+class RepositoryInDB(RepositoryBase):
+    model_config = ConfigDict(from_attributes=True)
+    external_profile_id: int
+    github_repo_id: int
+    is_fork: bool
+    repo_created_at: datetime
+    repo_updated_at: datetime
+    last_commit_sync_at: datetime | None = None
+    generation_status: str
+    last_generation_attempt_at: datetime | None = None
+    last_generation_error: str | None = None
 
 
 class Issue(BaseModel):

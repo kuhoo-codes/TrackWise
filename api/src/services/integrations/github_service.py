@@ -208,6 +208,16 @@ class GithubService:
             last_sync_error=external_profile.last_sync_error,
         )
 
+    async def get_all_repositories(self, user_id: int) -> list[RepositoryInDB]:
+        """Get all GitHub repositories for the user"""
+        external_profile = await self.get_external_profile(user_id)
+        if not external_profile:
+            raise GitHubIntegrationError(
+                Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub external profile not found"}
+            )
+
+        return await self.repo.get_db_repositories(external_profile.id)
+
     async def attempt_sync_lock(self, profile_id: int) -> bool:
         """Try to acquire a lock for syncing. Returns True if lock acquired, False if already syncing."""
         return await self.external_profile_repo.attempt_sync_lock(profile_id, PlatformEnum.GITHUB)
