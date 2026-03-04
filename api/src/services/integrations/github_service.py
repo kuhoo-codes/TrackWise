@@ -186,6 +186,20 @@ class GithubService:
         external_profile = await self.get_external_profile(user_id)
         if not external_profile:
             return GithubSyncStatusResponse(is_connected=False, sync_status=SyncStatusEnum.IDLE)
+        
+        if external_profile.sync_status == SyncStatusEnum.SYNCING:
+            now = datetime.now(timezone.utc)
+            stale_threshold = now - timedelta(minutes=15)
+            if external_profile.last_sync_attempt_at and external_profile.last_sync_attempt_at < stale_threshold:
+                await self.external_profile_repo.set_sync_status(
+                    external_profile.id, SyncStatusEnum.IDLE, "Stale sync detected."
+                )
+                return GithubSyncStatusResponse(
+                    is_connected=True,
+                    sync_status=SyncStatusEnum.IDLE,
+                    last_synced_at=external_profile.last_synced_at,
+                    last_sync_error="Stale sync detected.",
+                    )
 
         return GithubSyncStatusResponse(
             is_connected=True,
