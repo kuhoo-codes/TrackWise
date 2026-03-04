@@ -1,6 +1,6 @@
 import asyncio
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import httpx
@@ -21,6 +21,7 @@ from src.schemas.integrations.github import (
     Issue,
     RepoCommit,
     Repository,
+    RepositoryInDB,
     TokenResponse,
     User,
 )
@@ -186,7 +187,7 @@ class GithubService:
         external_profile = await self.get_external_profile(user_id)
         if not external_profile:
             return GithubSyncStatusResponse(is_connected=False, sync_status=SyncStatusEnum.IDLE)
-        
+
         if external_profile.sync_status == SyncStatusEnum.SYNCING:
             now = datetime.now(timezone.utc)
             stale_threshold = now - timedelta(minutes=15)
@@ -199,7 +200,7 @@ class GithubService:
                     sync_status=SyncStatusEnum.IDLE,
                     last_synced_at=external_profile.last_synced_at,
                     last_sync_error="Stale sync detected.",
-                    )
+                )
 
         return GithubSyncStatusResponse(
             is_connected=True,
@@ -549,7 +550,7 @@ class GithubService:
                     commits=commits, timeline_id=timeline.id, repo_id=repo.id
                 )
 
-    async def generate_all_github_timelines(self, token_data: TokenData) -> None:
+    async def generate_github_timelines(self, token_data: TokenData, repository_ids: list[int]) -> None:
         """
         Iterates through all synced repositories and generates individual timelines.
         """
@@ -561,7 +562,8 @@ class GithubService:
                 Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub external profile not found"}
             )
 
-        repos = await self.repo.get_db_repositories(external_profile.id)
+        repos = await self.repo.get_repositories_by_ids(external_profile.id, repository_ids)
+        print(f"Generating timelines for repositories with IDs: {repository_ids}")
         if not repos:
             logger.warning("No repositories found for external profile ID: {}", external_profile.id)
             return
@@ -596,6 +598,12 @@ class GithubService:
 
         timeline = await self.timeline_service.create_timeline(timeline_create, token_data)
 
-        await self.timeline_service.generate_nodes_for_commits(
-            commits=commits, timeline_id=timeline.id, repo_id=repo.id, user_id=token_data.sub
-        )
+        try:
+            await self.timeline_service.generate_nodes_for_commits(
+                commits=commits, timeline_id=timeline.id, repo_id=repo.id, user_id=token_data.sub
+            )
+        except Exception as e:
+            logger.error(f"Error generating nodes for {repo.name}. Rolling back empty timeline.")
+
+            await self.timeline_service.delete_timeline(timeline.id)
+            raise e

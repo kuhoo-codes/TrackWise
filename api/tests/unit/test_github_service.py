@@ -487,7 +487,7 @@ async def test_generate_timeline_for_repo_success(
 
 
 @pytest.mark.asyncio
-async def test_generate_all_github_timelines_multiple_repos(
+async def test_generate_github_timelines_multiple_repos(
     github_service: GithubService, mock_external_profile_repo: AsyncMock, mock_github_repo: AsyncMock
 ) -> None:
     # --- Setup ---
@@ -498,12 +498,12 @@ async def test_generate_all_github_timelines_multiple_repos(
     # Mock two repositories in the DB
     repo1 = MagicMock(id=101)
     repo2 = MagicMock(id=102)
-    mock_github_repo.get_db_repositories.return_value = [repo1, repo2]
+    mock_github_repo.get_repositories_by_ids.return_value = [repo1, repo2]
 
     # Patch the single-repo method so we don't run the full logic twice
     with patch.object(github_service, "generate_timeline_for_repo", new_callable=AsyncMock) as mock_single_gen:
         # --- Execute ---
-        await github_service.generate_all_github_timelines(token_data)
+        await github_service.generate_github_timelines(token_data=token_data, repository_ids=[101, 102])
 
         # --- Assert ---
         assert mock_single_gen.call_count == 2
@@ -512,7 +512,7 @@ async def test_generate_all_github_timelines_multiple_repos(
 
 
 @pytest.mark.asyncio
-async def test_generate_all_github_timelines_no_profile(
+async def test_generate_github_timelines_no_profile(
     github_service: GithubService, mock_external_profile_repo: AsyncMock
 ) -> None:
     # --- Setup ---
@@ -521,7 +521,7 @@ async def test_generate_all_github_timelines_no_profile(
 
     # --- Execute & Assert ---
     with pytest.raises(GitHubIntegrationError) as exc:
-        await github_service.generate_all_github_timelines(token_data)
+        await github_service.generate_github_timelines(token_data=token_data, repository_ids=[101, 102])
 
     assert exc.value.details["error"] == "GitHub external profile not found"
 

@@ -347,3 +347,82 @@ def test_get_github_repositories_unauthorized(
 
     assert response.status_code == 403
 
+
+def test_generate_github_timelines_success(
+    client: TestClient,
+    auth_helper: AuthHelper,
+) -> None:
+    """Test starting timeline generation successfully."""
+
+    appa_headers = auth_helper.get_auth_headers("appa")
+
+    with (
+        patch(
+            "src.services.integrations.github_service.GithubService.generate_github_timelines",
+            new_callable=AsyncMock,
+        ) as mock_generate,
+        patch(
+            "src.repositories.integrations.github_repository.GithubRepository.lock_repos_for_timeline_generation",
+            new_callable=AsyncMock,
+        ) as mock_lock,
+    ):
+        # Lock returns repo ids (means available for processing)
+        mock_lock.return_value = [1, 2, 3]
+
+        response = client.post(
+            "/integrations/github/timelines",
+            json=[1, 2, 3],  # IMPORTANT: raw list because endpoint expects list[int]
+            headers=appa_headers,
+        )
+
+        data = response.json()
+
+        assert response.status_code == 202
+        assert data["status"] == "accepted"
+        assert "started" in data["message"]
+
+        mock_lock.assert_awaited_once_with([1, 2, 3])
+        mock_generate.assert_called_once()
+
+
+def test_generate_github_timelines_all_locked(
+    client: TestClient,
+    auth_helper: AuthHelper,
+) -> None:
+    """Test when all selected repositories are already being processed."""
+
+    appa_headers = auth_helper.get_auth_headers("appa")
+
+    with patch(
+        "src.repositories.integrations.github_repository.GithubRepository.lock_repos_for_timeline_generation",
+        new_callable=AsyncMock,
+    ) as mock_lock:
+        # Nothing available for processing
+        mock_lock.return_value = []
+
+        response = client.post(
+            "/integrations/github/timelines",
+            json=[1, 2],
+            headers=appa_headers,
+        )
+
+        data = response.json()
+
+        assert response.status_code == 202
+        assert data["status"] == "queued"
+        assert "currently being processed" in data["message"]
+
+        mock_lock.assert_awaited_once_with([1, 2])
+
+
+def test_generate_github_timelines_unauthorized(
+    client: TestClient,
+) -> None:
+    """Test endpoint requires authentication."""
+
+    response = client.post(
+        "/integrations/github/timelines",
+        json=[1, 2, 3],
+    )
+
+    assert response.status_code == 403
