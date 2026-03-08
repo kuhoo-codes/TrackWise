@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi import UploadFile
 
 from src.exceptions.timeline import (
     InvalidTimelineNodeError,
@@ -119,9 +120,14 @@ async def test_create_timeline_node_success(timeline_service: TimelineService, m
         is_current=False,
     )
 
+    media = UploadFile(
+        filename="test.png",
+        file=MagicMock(read=AsyncMock(return_value=b"fake image data")),
+    )
+
     mock_timeline_repo.get_timeline_by_id.return_value = MagicMock(id=10)
 
-    await timeline_service.create_timeline_node(node_in, user_id)
+    await timeline_service.create_timeline_node(user_id, node_in, media)
 
     mock_timeline_repo.create_timeline_node.assert_called_once()
 
@@ -134,7 +140,7 @@ async def test_create_timeline_node_timeline_not_found(
     node_in = TimelineNodeCreate(timeline_id=99, title="Fail", type="work", is_current=True, start_date=datetime.now())
 
     with pytest.raises(TimelineNotFoundError):
-        await timeline_service.create_timeline_node(node_in, user_id=1)
+        await timeline_service.create_timeline_node(user_id=1, timeline_node=node_in, media=None)
 
 
 # --- Validation Helper Tests ---

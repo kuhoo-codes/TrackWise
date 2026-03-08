@@ -28,7 +28,10 @@ class TimelineRepository:
         statement = (
             select(Timeline)
             .where(Timeline.id == timeline_id, Timeline.user_id == user_id)
-            .options(selectinload(Timeline.nodes).selectinload(TimelineNode.children))
+            .options(
+                selectinload(Timeline.nodes).selectinload(TimelineNode.children),
+                selectinload(Timeline.nodes).selectinload(TimelineNode.media),
+            )
         )
         result = await self.db.execute(statement)
         return result.scalars().first()
@@ -70,7 +73,11 @@ class TimelineRepository:
         statement = (
             select(TimelineNode)
             .where(TimelineNode.id == node_id)
-            .options(selectinload(TimelineNode.children).selectinload(TimelineNode.children))
+            .options(
+                selectinload(TimelineNode.media),
+                selectinload(TimelineNode.children).selectinload(TimelineNode.media),
+                selectinload(TimelineNode.children).selectinload(TimelineNode.children),
+            )
         )
         result = await self.db.execute(statement)
         return result.scalar_one_or_none()

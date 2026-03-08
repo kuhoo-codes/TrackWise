@@ -138,11 +138,11 @@ def test_get_timeline_node_with_children(mock_redis: MagicMock, client: TestClie
         data={
             "timeline_node": json.dumps(
                 {
-            "timeline_id": timeline_id,
-            "title": "Parent Node",
-            "type": "work",
-            "start_date": "2020-01-01",
-            "is_current": True,
+                    "timeline_id": timeline_id,
+                    "title": "Parent Node",
+                    "type": "work",
+                    "start_date": "2020-01-01",
+                    "is_current": True,
                 }
             )
         },
@@ -155,13 +155,13 @@ def test_get_timeline_node_with_children(mock_redis: MagicMock, client: TestClie
         data={
             "timeline_node": json.dumps(
                 {
-            "timeline_id": timeline_id,
-            "parent_id": parent_id,
-            "title": "Child Node",
-            "type": "project",
-            "start_date": "2021-01-01",
-            "end_date": "2021-06-01",
-            "is_current": False,
+                    "timeline_id": timeline_id,
+                    "parent_id": parent_id,
+                    "title": "Child Node",
+                    "type": "project",
+                    "start_date": "2021-01-01",
+                    "end_date": "2021-06-01",
+                    "is_current": False,
                 }
             )
         },
@@ -193,11 +193,11 @@ def test_update_timeline_node_success(mock_redis: MagicMock, client: TestClient,
         data={
             "timeline_node": json.dumps(
                 {
-            "timeline_id": timeline_id,
-            "title": "Old Title",
-            "type": "work",
-            "start_date": "2022-01-01",
-            "is_current": True,
+                    "timeline_id": timeline_id,
+                    "title": "Old Title",
+                    "type": "work",
+                    "start_date": "2022-01-01",
+                    "is_current": True,
                 }
             )
         },
@@ -206,11 +206,15 @@ def test_update_timeline_node_success(mock_redis: MagicMock, client: TestClient,
 
     response = client.patch(
         f"/timelines/node/{node_id}",
-        json={
-            "title": "Updated Title",
-            "type": "work",
-            "start_date": "2022-01-01",
-            "is_current": True,
+        data={
+            "timeline_node": json.dumps(
+                {
+                    "title": "Updated Title",
+                    "type": "work",
+                    "start_date": "2022-01-01",
+                    "is_current": True,
+                }
+            )
         },
         headers=headers,
     )
@@ -235,11 +239,11 @@ def test_delete_timeline_node_success(mock_redis: MagicMock, client: TestClient,
         data={
             "timeline_node": json.dumps(
                 {
-            "timeline_id": timeline_id,
-            "title": "Temp Node",
-            "type": "work",
-            "start_date": "2022-01-01",
-            "is_current": True,
+                    "timeline_id": timeline_id,
+                    "title": "Temp Node",
+                    "type": "work",
+                    "start_date": "2022-01-01",
+                    "is_current": True,
                 }
             )
         },

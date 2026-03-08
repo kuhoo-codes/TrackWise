@@ -135,13 +135,14 @@ async def create_timeline_node(
 async def update_timeline_node(
     node_id: int,
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
-    timeline_node: TimelineNodeBase,
+    timeline_node: Annotated[Json[TimelineNodeBase], Form(...)],
     timeline_service: Annotated[TimelineService, Depends(get_timeline_service)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    media: Annotated[UploadFile | None, File()] = None,
 ) -> TimelineNode:
     """Update a timeline node."""
     token_data = auth_service.verify_token(token=credentials.credentials)
-    return await timeline_service.update_timeline_node(node_id, timeline_node, token_data.sub)
+    return await timeline_service.update_timeline_node(token_data.sub, node_id, timeline_node, media)
 
 
 @router.delete("/node/{node_id}", status_code=status.HTTP_204_NO_CONTENT)
