@@ -36,11 +36,14 @@ export const useTimeline = (timelineId: number) => {
     void fetchTimeline();
   }, [fetchTimeline]);
 
-  const createNode = async (data: TimelineNodeFormValues) => {
+  const createNode = async (
+    data: TimelineNodeFormValues,
+    media: File | null,
+  ) => {
     if (!token) return;
     try {
       const payload = adaptNodeToCreateRequest(data, timelineId);
-      await TimelineService.createNode(payload);
+      await TimelineService.createNode(payload, media);
       await fetchTimeline();
       toast.success("Node created!");
       return true;
@@ -52,11 +55,15 @@ export const useTimeline = (timelineId: number) => {
     }
   };
 
-  const updateNode = async (nodeId: number, data: TimelineNodeFormValues) => {
+  const updateNode = async (
+    nodeId: number,
+    data: TimelineNodeFormValues,
+    media: File | null,
+  ) => {
     if (!token) return;
     try {
       const payload = adaptNodeToUpdateRequest(data);
-      await TimelineService.updateNode(nodeId, payload);
+      await TimelineService.updateNode(nodeId, payload, media);
       await fetchTimeline();
       toast.success("Node updated!");
       return true;

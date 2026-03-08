@@ -50,6 +50,15 @@ export const DATE_GRANULARITY = {
 const DateGranularitySchema = z.nativeEnum(DATE_GRANULARITY);
 export type DateGranularity = z.infer<typeof DateGranularitySchema>;
 
+export const NodeArtifactSchema = z.object({
+  id: z.number(),
+  nodeId: z.number(),
+  mediaType: z.string(),
+  caption: z.string().nullable().optional(),
+});
+
+export type NodeArtifact = z.infer<typeof NodeArtifactSchema>;
+
 const BaseTimelineNodeSchema = z.object({
   id: z.number(),
   timelineId: z.number(),
@@ -64,6 +73,7 @@ const BaseTimelineNodeSchema = z.object({
   privateNotes: z.string().optional(),
   dateGranularity: DateGranularitySchema,
   color: z.string(),
+  media: z.array(NodeArtifactSchema).optional(),
 });
 
 export type TimelineNode = z.infer<typeof BaseTimelineNodeSchema> & {

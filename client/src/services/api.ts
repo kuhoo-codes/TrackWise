@@ -5,9 +5,6 @@ import { TokenStorage } from "@/services/tokenStorage";
 export const api = Axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 api.interceptors.request.use(

@@ -57,9 +57,15 @@ export class TimelineService {
 
   static async createNode(
     data: ApiTimelineNodeCreateRequest,
+    media: File | null,
   ): Promise<TimelineNode> {
     try {
-      const response = await api.post("/timelines/node", data, {});
+      const formData = new FormData();
+      formData.append("timeline_node", JSON.stringify(data));
+      if (media) {
+        formData.append("media", media);
+      }
+      const response = await api.post("/timelines/node", formData, {});
       return adaptTimelineNode(response.data);
     } catch (error) {
       throw handleServiceError(error);
@@ -69,9 +75,19 @@ export class TimelineService {
   static async updateNode(
     nodeId: number,
     data: ApiTimelineNodeUpdateRequest,
+    media: File | null,
   ): Promise<TimelineNode> {
     try {
-      const response = await api.patch(`/timelines/node/${nodeId}`, data, {});
+      const formData = new FormData();
+      formData.append("timeline_node", JSON.stringify(data));
+      if (media) {
+        formData.append("media", media);
+      }
+      const response = await api.patch(
+        `/timelines/node/${nodeId}`,
+        formData,
+        {},
+      );
       return adaptTimelineNode(response.data);
     } catch (error) {
       throw handleServiceError(error);

@@ -27,6 +27,13 @@ export interface ApiTimelineSummary {
   updated_at: string;
 }
 
+export interface ApiNodeArtifact {
+  id: number;
+  node_id: number;
+  media_type: string;
+  caption?: string | null;
+}
+
 export interface ApiTimelineNode {
   id: number;
   timeline_id: number;
@@ -40,6 +47,7 @@ export interface ApiTimelineNode {
   description?: string;
   private_notes?: string;
   date_granularity: string;
+  media: ApiNodeArtifact[];
   children: ApiTimelineNode[];
 }
 
