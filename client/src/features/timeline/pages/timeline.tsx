@@ -65,7 +65,7 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
     () =>
       nodes.map((node) => ({
         ...node,
-        endDate: node.endDate ?? new Date(),
+        renderEndDate: node.endDate ?? new Date(),
       })),
     [nodes],
   );
@@ -125,7 +125,7 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
 
     if (uiItems.length > 0) {
       const startTimes = uiItems.map((i) => i.startDate.getTime());
-      const endTimes = uiItems.map((i) => i.endDate.getTime());
+      const endTimes = uiItems.map((i) => i.renderEndDate.getTime());
       start = new Date(Math.min(...startTimes));
       end = new Date(Math.max(...endTimes));
     }
@@ -273,9 +273,9 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
       );
       if (laneIndex === -1) {
         laneIndex = lanes.length;
-        lanes.push(item.endDate);
+        lanes.push(item.renderEndDate);
       } else {
-        lanes[laneIndex] = item.endDate;
+        lanes[laneIndex] = item.renderEndDate;
       }
       return { ...item, laneIndex };
     });
@@ -368,7 +368,7 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
           <div className="relative mt-8 h-full pointer-events-none">
             {itemsWithLanes.map((item) => {
               const left = getXPosition(viewStartDate, item.startDate, scale);
-              const width = getWidth(item.startDate, item.endDate, scale);
+              const width = getWidth(item.startDate, item.renderEndDate, scale);
               const bottom = item.laneIndex * (LANE_HEIGHT + LANE_GAP);
 
               return (
