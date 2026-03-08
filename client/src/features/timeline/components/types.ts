@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { NodeTypeSchema } from "@/services/types";
+import { NodeTypeSchema, NodeArtifactSchema } from "@/services/types";
 
 export const timelineNodeSchema = z
   .object({
@@ -26,7 +26,7 @@ export const timelineNodeSchema = z
     description: z.string().nullable().optional().or(z.literal("")),
     privateNotes: z.string().nullable().optional().or(z.literal("")),
 
-    media: z.array(z.any()).optional(),
+    media: z.array(NodeArtifactSchema).optional().default([]),
   })
   .superRefine((data, ctx) => {
     if (!data.isCurrent && !data.endDate) {

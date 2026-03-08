@@ -90,6 +90,7 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
       shortSummary: node.shortSummary,
       description: node.description,
       privateNotes: node.privateNotes,
+      media: node.media || [],
     });
     setIsModalOpen(true);
   };
@@ -100,12 +101,15 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineId }) => {
     }
   };
 
-  const handleModalSubmit = async (data: TimelineNodeFormValues) => {
+  const handleModalSubmit = async (
+    data: TimelineNodeFormValues,
+    media: File | null,
+  ) => {
     try {
       if (modalInitialData.id) {
-        await updateNode(modalInitialData.id, data);
+        await updateNode(modalInitialData.id, data, media);
       } else {
-        await createNode(data);
+        await createNode(data, media);
       }
 
       setIsModalOpen(false);

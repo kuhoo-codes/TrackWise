@@ -10,6 +10,7 @@ import type {
   ApiTimelineCreateRequest,
   ApiGithubSyncStatus,
   ApiGithubRepository,
+  ApiNodeArtifact,
 } from "@/services/apiTypes";
 import {
   NODE_TYPES,
@@ -25,6 +26,7 @@ import {
   type GithubSyncStatus,
   type SyncStatus,
   type GithubRepository,
+  type NodeArtifact,
 } from "@/services/types";
 
 export const adaptUser = (data: ApiUser): User => ({
@@ -82,8 +84,16 @@ export const adaptTimelineNode = (data: ApiTimelineNode): TimelineNode => ({
   description: data.description,
   privateNotes: data.private_notes,
   dateGranularity: data.date_granularity as DateGranularity,
+  media: data.media.map(adaptNodeArtifact),
   children: data.children?.map(adaptTimelineNode),
   color: getNodeColor(data.type as NodeType),
+});
+
+const adaptNodeArtifact = (data: ApiNodeArtifact): NodeArtifact => ({
+  id: data.id,
+  nodeId: data.node_id,
+  mediaType: data.media_type,
+  caption: data.caption || undefined,
 });
 
 export const getNodeColor = (type: NodeType): string => {

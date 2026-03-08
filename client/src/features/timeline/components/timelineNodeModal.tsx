@@ -20,7 +20,7 @@ import { NODE_TYPES, type TimelineNode } from "@/services/types";
 interface NodeModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: TimelineNodeFormValues) => Promise<void>;
+  onSubmit: (data: TimelineNodeFormValues, file: File | null) => Promise<void>;
   onDelete?: (id: number) => void;
   availableParents: TimelineNode[];
   initialData: TimelineNodeFormValues;
@@ -51,12 +51,14 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<TimelineNodeFormValues>(initialData);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setErrors({});
       setFormData({ ...initialData });
       setActiveTab("essentials");
+      setSelectedFile(null);
     }
   }, [isOpen, initialData]);
 
@@ -89,6 +91,16 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0] || null);
+    }
+  };
+
+  const removeFile = () => {
+    setSelectedFile(null);
+  };
+
   const handleValidationAndSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -112,7 +124,7 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
     }
 
     try {
-      await onSubmit(validation.data!);
+      await onSubmit(validation.data!, selectedFile);
     } catch (error) {
       console.error("Submit error", error);
     } finally {
@@ -387,9 +399,13 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
                       type="checkbox"
                       id="isCurrent"
                       checked={formData.isCurrent}
-                      onChange={(e) =>
-                        handleChange("isCurrent", e.target.checked)
-                      }
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        handleChange("isCurrent", isChecked);
+                        if (isChecked) {
+                          handleChange("endDate", null);
+                        }
+                      }}
                       className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
                     />
                     <Label.Root
@@ -476,19 +492,70 @@ export const TimelineNodeModal: React.FC<NodeModalProps> = ({
 
             {/* --- TAB: MEDIA --- */}
             {activeTab === "media" && (
-              <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
-                <div className="text-center">
-                  <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm font-medium">
-                    Media Upload
-                  </p>
-                  <p className="text-gray-400 text-xs">
-                    Drag and drop or click to upload
-                  </p>
-                </div>
+              <div className="space-y-4">
+                {/* Show the Dropzone ONLY IF there is no new file AND no existing media */}
+                {!selectedFile &&
+                (!formData.media || formData.media.length === 0) ? (
+                  <div className="relative flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer overflow-hidden">
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/gif, application/pdf"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="text-center pointer-events-none">
+                      <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600 text-sm font-medium">
+                        Click or drag media here
+                      </p>
+                      <p className="text-gray-400 text-xs mt-1">
+                        PNG, JPG, GIF, PDF up to 5MB
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-48 border border-gray-200 rounded-xl bg-white p-6">
+                    <div className="flex items-center gap-3 w-full max-w-sm bg-gray-50 p-3 rounded-lg border border-gray-100">
+                      <ImageIcon className="w-8 h-8 text-blue-500 shrink-0" />
+
+                      <div className="flex-1 min-w-0">
+                        {/* Display either the newly selected file name OR the existing server media */}
+                        {selectedFile ? (
+                          <>
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {selectedFile.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {formData.media![0]?.caption || "Attached Media"}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Existing File
+                            </p>
+                          </>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          removeFile();
+                          handleChange("media", []);
+                        }}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-
             <button type="submit" className="hidden" />
           </form>
 
