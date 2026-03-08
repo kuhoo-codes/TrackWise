@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -107,7 +108,11 @@ def test_create_timeline_node_success(mock_redis: MagicMock, client: TestClient,
         "is_current": False,
     }
 
-    response = client.post("/timelines/node", json=payload, headers=headers)
+    response = client.post(
+        "/timelines/node",
+        data={"timeline_node": json.dumps(payload)},
+        headers=headers,
+    )
     data = response.json()
 
     assert response.status_code == 201
@@ -130,12 +135,16 @@ def test_get_timeline_node_with_children(mock_redis: MagicMock, client: TestClie
 
     parent_res = client.post(
         "/timelines/node",
-        json={
+        data={
+            "timeline_node": json.dumps(
+                {
             "timeline_id": timeline_id,
             "title": "Parent Node",
             "type": "work",
             "start_date": "2020-01-01",
             "is_current": True,
+                }
+            )
         },
         headers=headers,
     )
@@ -143,7 +152,9 @@ def test_get_timeline_node_with_children(mock_redis: MagicMock, client: TestClie
 
     client.post(
         "/timelines/node",
-        json={
+        data={
+            "timeline_node": json.dumps(
+                {
             "timeline_id": timeline_id,
             "parent_id": parent_id,
             "title": "Child Node",
@@ -151,6 +162,8 @@ def test_get_timeline_node_with_children(mock_redis: MagicMock, client: TestClie
             "start_date": "2021-01-01",
             "end_date": "2021-06-01",
             "is_current": False,
+                }
+            )
         },
         headers=headers,
     )
@@ -177,12 +190,16 @@ def test_update_timeline_node_success(mock_redis: MagicMock, client: TestClient,
 
     node_id = client.post(
         "/timelines/node",
-        json={
+        data={
+            "timeline_node": json.dumps(
+                {
             "timeline_id": timeline_id,
             "title": "Old Title",
             "type": "work",
             "start_date": "2022-01-01",
             "is_current": True,
+                }
+            )
         },
         headers=headers,
     ).json()["id"]
@@ -215,12 +232,16 @@ def test_delete_timeline_node_success(mock_redis: MagicMock, client: TestClient,
 
     node_id = client.post(
         "/timelines/node",
-        json={
+        data={
+            "timeline_node": json.dumps(
+                {
             "timeline_id": timeline_id,
             "title": "Temp Node",
             "type": "work",
             "start_date": "2022-01-01",
             "is_current": True,
+                }
+            )
         },
         headers=headers,
     ).json()["id"]

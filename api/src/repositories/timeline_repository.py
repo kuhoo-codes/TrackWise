@@ -3,6 +3,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.models.node_artifacts import NodeArtifact
 from src.models.timeline_nodes import TimelineNode
 from src.models.timelines import Timeline
 from src.schemas.timelines import TimelineBase
@@ -74,12 +75,27 @@ class TimelineRepository:
         result = await self.db.execute(statement)
         return result.scalar_one_or_none()
 
-    async def create_timeline_node(self, timeline_node: TimelineNode) -> TimelineNode:
+    async def create_timeline_node(
+        self,
+        timeline_node: TimelineNode,
+        media_bytes: bytes | None = None,
+        media_type: str | None = None,
+        media_filename: str | None = None,
+    ) -> TimelineNode:
         """Create a new timeline node in the database."""
+        if media_bytes:
+            artifact = NodeArtifact(media_data=media_bytes, media_type=media_type, caption=media_filename)
+            timeline_node.media.append(artifact)
+
         self.db.add(timeline_node)
         await self.db.commit()
         stmt = (
-            select(TimelineNode).options(selectinload(TimelineNode.children)).where(TimelineNode.id == timeline_node.id)
+            select(TimelineNode)
+            .options(
+                selectinload(TimelineNode.children),
+                selectinload(TimelineNode.media),
+            )
+            .where(TimelineNode.id == timeline_node.id)
         )
 
         result = await self.db.execute(stmt)
