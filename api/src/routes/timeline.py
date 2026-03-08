@@ -1,7 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import Json
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
@@ -120,13 +121,14 @@ async def get_timeline_node(
 @router.post("/node", status_code=status.HTTP_201_CREATED, response_model=TimelineNode)
 async def create_timeline_node(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
-    timeline_node: TimelineNodeCreate,
+    timeline_node: Annotated[Json[TimelineNodeCreate], Form(...)],
     timeline_service: Annotated[TimelineService, Depends(get_timeline_service)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    media: Annotated[UploadFile | None, File()] = None,
 ) -> TimelineNode:
     """Create a new timeline node."""
     token_data = auth_service.verify_token(token=credentials.credentials)
-    return await timeline_service.create_timeline_node(timeline_node, token_data.sub)
+    return await timeline_service.create_timeline_node(token_data.sub, timeline_node, media)
 
 
 @router.patch("/node/{node_id}", status_code=status.HTTP_200_OK, response_model=TimelineNode)

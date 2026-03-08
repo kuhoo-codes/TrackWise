@@ -22,6 +22,16 @@ class DateGranularity(str, Enum):
     SEASON = "season"
 
 
+class NodeArtifactSchema(BaseModel):
+    id: int
+    node_id: int
+    media_type: str
+    caption: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
 class TimelineNodeBase(BaseModel):
     parent_id: int | None = None
     title: str

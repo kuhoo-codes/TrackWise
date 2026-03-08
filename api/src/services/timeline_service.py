@@ -1,8 +1,10 @@
+from fastapi import UploadFile
 from loguru import logger
 
 from src.core.config import Errors
 from src.exceptions.ai import AIServiceError
 from src.exceptions.timeline import InvalidTimelineNodeError, TimelineNodeNotFoundError, TimelineNotFoundError
+from src.models.node_artifacts import NodeArtifact
 from src.models.timeline_nodes import TimelineNode
 from src.models.timelines import Timeline
 from src.repositories.timeline_repository import TimelineRepository
@@ -106,7 +108,9 @@ class TimelineService:
             raise TimelineNodeNotFoundError(Errors.TIMELINE_NODE_NOT_FOUND.value, details={"node_id": node_id})
         return node
 
-    async def create_timeline_node(self, timeline_node: TimelineNodeCreate, user_id: int) -> TimelineNode:
+    async def create_timeline_node(
+        self, user_id: int, timeline_node: TimelineNodeCreate, media: UploadFile | None
+    ) -> TimelineNode:
         """Create a new timeline."""
         timeline = await self.timeline_repo.get_timeline_by_id(timeline_node.timeline_id, user_id)
         if not timeline:
@@ -135,7 +139,16 @@ class TimelineService:
             parent_id=timeline_node.parent_id,
         )
 
-        return await self.timeline_repo.create_timeline_node(timeline_node_db)
+        media_bytes = None
+        media_type = None
+        media_filename = None
+
+        if media:
+            media_bytes = await media.read()
+            media_type = media.content_type
+            media_filename = media.filename
+
+        return await self.timeline_repo.create_timeline_node(timeline_node_db, media_bytes, media_type, media_filename)
 
     async def update_timeline_node(self, node_id: int, timeline_node: TimelineNodeBase, user_id: int) -> TimelineNode:
         """Update a timeline node."""
@@ -233,7 +246,7 @@ class TimelineService:
                         if needs_update:
                             await self.update_timeline_node(last_parent.id, last_parent, user_id)
 
-                    created_node = await self.create_timeline_node(timeline_node=node_data, user_id=user_id)
+                    created_node = await self.create_timeline_node(user_id=user_id, timeline_node=node_data, media=None)
 
                     if last_parent is None or ai_result.action == AnalysisAction.CREATE_NODE:
                         last_parent = created_node
