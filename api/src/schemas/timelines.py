@@ -53,6 +53,7 @@ class TimelineNodeCreate(TimelineNodeBase):
 
 class TimelineNode(TimelineNodeCreate, TimestampSchema):
     id: int
+    media: list[NodeArtifactSchema] = []
 
     class Config:
         from_attributes = True

@@ -150,7 +150,9 @@ class TimelineService:
 
         return await self.timeline_repo.create_timeline_node(timeline_node_db, media_bytes, media_type, media_filename)
 
-    async def update_timeline_node(self, node_id: int, timeline_node: TimelineNodeBase, user_id: int) -> TimelineNode:
+    async def update_timeline_node(
+        self, user_id: int, node_id: int, timeline_node: TimelineNodeBase, media: UploadFile | None = None
+    ) -> TimelineNode:
         """Update a timeline node."""
         existing_node = await self.get_timeline_node_by_id(node_id)
         timeline = await self.timeline_repo.get_timeline_by_id(existing_node.timeline_id, user_id)
@@ -183,6 +185,15 @@ class TimelineService:
         existing_node.github_repo_id = timeline_node.github_repo_id
         existing_node.github_pr_id = timeline_node.github_pr_id
         existing_node.parent_id = timeline_node.parent_id
+
+        if media:
+            existing_node.media.clear()
+
+            media_bytes = await media.read()
+            artifact = NodeArtifact(media_data=media_bytes, media_type=media.content_type, caption=media.filename)
+            existing_node.media.append(artifact)
+        elif existing_node.media:
+            existing_node.media.clear()
 
         return await self.timeline_repo.update_timeline_node(node_id, existing_node)
 
@@ -244,7 +255,9 @@ class TimelineService:
                             needs_update = True
 
                         if needs_update:
-                            await self.update_timeline_node(last_parent.id, last_parent, user_id)
+                            await self.update_timeline_node(
+                                user_id=user_id, node_id=last_parent.id, timeline_node=last_parent
+                            )
 
                     created_node = await self.create_timeline_node(user_id=user_id, timeline_node=node_data, media=None)
 
