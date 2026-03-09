@@ -63,4 +63,4 @@ async def logout(
 ) -> JSONResponse:
     """Logout user by invalidating the token."""
     token = credentials.credentials
-    await auth_service.add_to_blacklist(token)
+    await auth_service.add_to_blacklist(token=token)

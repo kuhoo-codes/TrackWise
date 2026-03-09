@@ -33,11 +33,11 @@ class ActivityClusteringService:
             if curr_commit.authored_at - prev_commit.authored_at <= self.window_days:
                 current_batch.append(curr_commit)
             else:
-                clusters.append(self._create_cluster_object(current_batch))
+                clusters.append(self._create_cluster_object(batch=current_batch))
                 current_batch = [curr_commit]
 
         if current_batch:
-            clusters.append(self._create_cluster_object(current_batch))
+            clusters.append(self._create_cluster_object(batch=current_batch))
 
         return clusters
 
@@ -82,7 +82,7 @@ class ActivityClusteringService:
                     all_exts.append(ext)
 
         # Heuristics for metadata
-        topic = self._get_topic_from_paths(all_files)
+        topic = self._get_topic_from_paths(file_paths=all_files)
         most_frequent_type = Counter(all_types).most_common(1)[0][0]
         unique_exts = list(set(all_exts))
 

@@ -10,8 +10,8 @@ class TimelineAnalysisService:
 
     async def analyze_cluster(self, cluster: Cluster, repo_id: int) -> AnalysisResult:
         """Orchestrates the context building and provider execution."""
-        context = self._build_context(cluster)
-        result = await self.provider.analyze_payload(context)
+        context = self._build_context(cluster=cluster)
+        result = await self.provider.analyze_payload(prompt_context=context)
 
         if result.action == AnalysisAction.CREATE_NODE and result.node_content:
             result.node_content.github_repo_id = repo_id

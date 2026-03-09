@@ -55,10 +55,10 @@ async def test_get_user_timelines(timeline_service: TimelineService, mock_timeli
     user_id = 1
     mock_timeline_repo.get_timelines_by_user_id.return_value = [Timeline(id=1, title="Test")]
 
-    result = await timeline_service.get_user_timelines(user_id)
+    result = await timeline_service.get_user_timelines(user_id=user_id)
 
     assert len(result) == 1
-    mock_timeline_repo.get_timelines_by_user_id.assert_called_once_with(user_id)
+    mock_timeline_repo.get_timelines_by_user_id.assert_called_once_with(user_id=user_id)
 
 
 @pytest.mark.asyncio
@@ -101,8 +101,8 @@ async def test_create_timeline(
     await timeline_service.create_timeline(timeline_in, sample_token_data)
 
     # Verify the model passed to repo has the correct user_id from token
-    args, _ = mock_timeline_repo.create_timeline.call_args
-    created_model = args[0]
+    _, kwargs = mock_timeline_repo.create_timeline.call_args
+    created_model = kwargs["timeline"]
     assert created_model.user_id == sample_token_data.sub
     assert created_model.title == "New Timeline"
 
@@ -232,9 +232,11 @@ async def test_delete_timeline_node_success(timeline_service: TimelineService, m
     mock_timeline_repo.get_timeline_node_lite.return_value = mock_node
     mock_timeline_repo.get_timeline_by_id.return_value = MagicMock(id=10)
 
-    await timeline_service.delete_timeline_node(node_id, user_id)
+    await timeline_service.delete_timeline_node(node_id=node_id, user_id=user_id)
 
-    mock_timeline_repo.delete_timeline_node.assert_called_once_with(node_id)
+    mock_timeline_repo.delete_timeline_node.assert_called_once_with(
+        node_id=node_id,
+    )
 
 
 @pytest.mark.asyncio

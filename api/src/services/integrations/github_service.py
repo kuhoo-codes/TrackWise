@@ -51,7 +51,7 @@ class GithubService:
     async def get_auth_url(self, user_id: Annotated[str, "Associated user ID"]) -> str:
         """Generate GitHub OAuth authorization URL."""
         state = secrets.token_urlsafe(16)
-        await self.repo.save_state(state, user_id)
+        await self.repo.save_state(state=state, user_id=user_id)
 
         params = {
             "client_id": settings.GITHUB_CLIENT_ID,
@@ -61,22 +61,22 @@ class GithubService:
 
     async def handle_callback(self, code: str, state: Annotated[str, "GitHub OAuth state parameter"]) -> TokenResponse:
         """Handle GitHub OAuth callback and exchange code for token."""
-        state_record = await self.repo.validate_state(state)
+        state_record = await self.repo.validate_state(state=state)
         user_id = state_record.user_id
         github_token = await self.exchange_github_code(
             code=code, client_id=settings.GITHUB_CLIENT_ID, client_secret=settings.GITHUB_CLIENT_SECRET
         )
-        await self.repo.save_token(user_id, github_token)
+        await self.repo.save_token(user_id=user_id, token=github_token)
         external_profile = await self.external_profile_repo.get_external_profile_by_user_id(
-            user_id, PlatformEnum.GITHUB
+            user_id=user_id, platform=PlatformEnum.GITHUB
         )
         if external_profile:
             logger.info("Updating existing external profile for user_id: {}", user_id)
-            await self.update_external_profile_token(external_profile, github_token)
+            await self.update_external_profile_token(external_profile=external_profile, github_token=github_token)
         else:
             logger.info("Creating new external profile for user_id: {}", user_id)
             github_user = await self.get_auth_user(github_token.access_token)
-            await self.create_external_profile(github_user, user_id, github_token)
+            await self.create_external_profile(github_user=github_user, user_id=user_id, github_token=github_token)
         return TokenResponse(access_token=github_token.access_token, token_type=github_token.token_type)
 
     async def exchange_github_code(self, code: str, client_id: str, client_secret: str) -> GithubToken:
@@ -113,7 +113,7 @@ class GithubService:
             last_synced_at=None,
         )
 
-        return await self.external_profile_repo.create_external_profile(external_profile)
+        return await self.external_profile_repo.create_external_profile(external_profile=external_profile)
 
     async def update_external_profile_token(
         self, external_profile: ExternalProfile, github_token: GithubToken
@@ -124,11 +124,13 @@ class GithubService:
         external_profile.access_token_expires_at = github_token.access_token_expires_at
         external_profile.refresh_token_expires_at = github_token.refresh_token_expires_at
 
-        return await self.external_profile_repo.update_external_profile(external_profile)
+        return await self.external_profile_repo.update_external_profile(external_profile=external_profile)
 
     async def get_external_profile(self, user_id: int) -> ExternalProfile:
         """Fetch the GitHub ExternalProfile for a given user."""
-        return await self.external_profile_repo.get_external_profile_by_user_id(user_id, PlatformEnum.GITHUB)
+        return await self.external_profile_repo.get_external_profile_by_user_id(
+            user_id=user_id, platform=PlatformEnum.GITHUB
+        )
 
     async def get_valid_access_token(self, github_profile: ExternalProfile) -> str:
         """Retrieve a valid GitHub access token, refreshing if necessary."""
@@ -164,7 +166,7 @@ class GithubService:
             )
 
         github_token = GithubToken(**data)
-        await self.update_external_profile_token(github_profile, github_token)
+        await self.update_external_profile_token(external_profile=github_profile, github_token=github_token)
         return github_token.access_token
 
     async def get_auth_user(self, access_token: str) -> User:
@@ -184,7 +186,7 @@ class GithubService:
 
     async def get_sync_status(self, user_id: int) -> GithubSyncStatusResponse:
         """Get the current GitHub sync status for a user."""
-        external_profile = await self.get_external_profile(user_id)
+        external_profile = await self.get_external_profile(user_id=user_id)
         if not external_profile:
             return GithubSyncStatusResponse(is_connected=False, sync_status=SyncStatusEnum.IDLE)
 
@@ -193,7 +195,7 @@ class GithubService:
             stale_threshold = now - timedelta(minutes=15)
             if external_profile.last_sync_attempt_at and external_profile.last_sync_attempt_at < stale_threshold:
                 await self.external_profile_repo.set_sync_status(
-                    external_profile.id, SyncStatusEnum.IDLE, "Stale sync detected."
+                    profile_id=external_profile.id, status=SyncStatusEnum.IDLE, error="Stale sync detected."
                 )
                 return GithubSyncStatusResponse(
                     is_connected=True,
@@ -211,17 +213,17 @@ class GithubService:
 
     async def get_all_repositories(self, user_id: int) -> list[RepositoryInDB]:
         """Get all GitHub repositories for the user"""
-        external_profile = await self.get_external_profile(user_id)
+        external_profile = await self.get_external_profile(user_id=user_id)
         if not external_profile:
             raise GitHubIntegrationError(
                 Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub external profile not found"}
             )
 
-        return await self.repo.get_db_repositories(external_profile.id)
+        return await self.repo.get_db_repositories(external_profile_id=external_profile.id)
 
     async def attempt_sync_lock(self, profile_id: int) -> bool:
         """Try to acquire a lock for syncing. Returns True if lock acquired, False if already syncing."""
-        return await self.external_profile_repo.attempt_sync_lock(profile_id, PlatformEnum.GITHUB)
+        return await self.external_profile_repo.attempt_sync_lock(profile_id=profile_id, platform=PlatformEnum.GITHUB)
 
     async def run_full_sync(self, access_token: str, github_profile: ExternalProfile) -> None:
         """This is the main function called by the background task."""
@@ -238,8 +240,10 @@ class GithubService:
             async with httpx.AsyncClient(headers=headers, timeout=timeout) as client:
                 if last_step == SyncStepEnum.NONE:
                     logger.info("Syncing repositories for GitHub profile ID: {}", profile_id)
-                    db_repos = await self.sync_repositories(client, github_profile.external_username, profile_id)
-                    await self.external_profile_repo.set_sync_step(profile_id, SyncStepEnum.REPOS)
+                    db_repos = await self.sync_repositories(
+                        client=client, username=github_profile.external_username, external_profile_id=profile_id
+                    )
+                    await self.external_profile_repo.set_sync_step(profile_id=profile_id, step=SyncStepEnum.REPOS)
                     last_step = SyncStepEnum.REPOS
                 else:
                     logger.info(
@@ -247,14 +251,14 @@ class GithubService:
                         profile_id,
                         last_step,
                     )
-                    db_repos = await self.repo.get_db_repositories(github_profile.id)
+                    db_repos = await self.repo.get_db_repositories(external_profile_id=github_profile.id)
 
                 repos_id_map = {repo.full_name: repo.id for repo in db_repos}
 
                 if last_step == SyncStepEnum.REPOS:
                     logger.info("Syncing issues for GitHub profile ID: {}", profile_id)
-                    await self.sync_issues(client, profile_id, repos_id_map)
-                    await self.external_profile_repo.set_sync_step(profile_id, SyncStepEnum.ISSUES)
+                    await self.sync_issues(client=client, external_profile_id=profile_id, repo_id_map=repos_id_map)
+                    await self.external_profile_repo.set_sync_step(profile_id=profile_id, step=SyncStepEnum.ISSUES)
                     last_step = SyncStepEnum.ISSUES
                 else:
                     logger.info(
@@ -263,8 +267,13 @@ class GithubService:
 
                 if last_step == SyncStepEnum.ISSUES:
                     logger.info("Syncing commits for GitHub profile ID: {}", profile_id)
-                    await self.sync_solo_commits(client, github_profile.external_username, profile_id, db_repos)
-                    await self.external_profile_repo.set_sync_step(profile_id, SyncStepEnum.COMMITS)
+                    await self.sync_solo_commits(
+                        client=client,
+                        username=github_profile.external_username,
+                        external_profile_id=profile_id,
+                        db_repos=db_repos,
+                    )
+                    await self.external_profile_repo.set_sync_step(profile_id=profile_id, step=SyncStepEnum.COMMITS)
                     last_step = SyncStepEnum.COMMITS
                 else:
                     logger.info(
@@ -273,43 +282,47 @@ class GithubService:
                         last_step,
                     )
 
-                await self.external_profile_repo.set_sync_status(profile_id, SyncStatusEnum.COMPLETED)
+                await self.external_profile_repo.set_sync_status(profile_id=profile_id, status=SyncStatusEnum.COMPLETED)
 
                 # Reset the step to NONE so the *next* sync runs everything
-                await self.external_profile_repo.set_sync_step(profile_id, SyncStepEnum.NONE)
+                await self.external_profile_repo.set_sync_step(profile_id=profile_id, step=SyncStepEnum.NONE)
                 logger.info("Completed full sync for GitHub profile ID: {}", profile_id)
 
         except Exception as e:
-            await self.external_profile_repo.set_sync_status(profile_id, SyncStatusEnum.FAILED, str(e))
+            await self.external_profile_repo.set_sync_status(
+                profile_id=profile_id, status=SyncStatusEnum.FAILED, error=str(e)
+            )
             raise GitHubIntegrationError(Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": str(e)}) from e
 
         finally:
-            profile = await self.get_external_profile(github_profile.user_id)
+            profile = await self.get_external_profile(user_id=github_profile.user_id)
             if profile.sync_status == SyncStatusEnum.SYNCING:
-                await self.external_profile_repo.set_sync_status(profile_id, SyncStatusEnum.IDLE)
+                await self.external_profile_repo.set_sync_status(profile_id=profile_id, status=SyncStatusEnum.IDLE)
 
     async def sync_repositories(
         self, client: httpx.AsyncClient, username: str, external_profile_id: int
     ) -> list[GithubRepoModel]:
         """Fetches repos from GitHub AND upserts them, returning the DB models."""
-        repos_data: list[Repository] = await self.fetch_all_repositories(client, username)
+        repos_data: list[Repository] = await self.fetch_all_repositories(client=client, username=username)
         if not repos_data:
             logger.info("No repositories found for user: {}", username)
             return []
 
-        return await self.repo.bulk_upsert_repositories(repos_data, external_profile_id)
+        return await self.repo.bulk_upsert_repositories(repos_data=repos_data, external_profile_id=external_profile_id)
 
     async def sync_issues(
         self, client: httpx.AsyncClient, external_profile_id: int, repo_id_map: dict[str, int]
     ) -> None:
         """Fetches issues from GitHub AND upserts them into the DB."""
-        issues: list[Issue] = await self.fetch_user_issues(client)
+        issues: list[Issue] = await self.fetch_user_issues(client=client)
 
         if not issues:
             logger.info("No issues found for external profile ID: {}", external_profile_id)
             return
 
-        await self.repo.bulk_upsert_issues(issues, external_profile_id, repo_id_map)
+        await self.repo.bulk_upsert_issues(
+            issue_data=issues, external_profile_id=external_profile_id, repo_id_map=repo_id_map
+        )
 
     async def sync_solo_commits(
         self, client: httpx.AsyncClient, username: str, external_profile_id: int, db_repos: list[GithubRepoModel]
@@ -323,7 +336,7 @@ class GithubService:
             sync_start_date = repo.last_commit_sync_at
 
             lightweight_commits = await self.fetch_author_commits_for_repo(
-                client, repo.full_name, username, sync_start_date
+                client=client, repo_full_name=repo.full_name, author=username, since_date=sync_start_date
             )
 
             if not lightweight_commits:
@@ -334,11 +347,13 @@ class GithubService:
                 )
                 continue
 
-            detailed_commits = await self.fetch_details_for_commits(client, lightweight_commits)
+            detailed_commits = await self.fetch_details_for_commits(client=client, repo_commits=lightweight_commits)
 
             if detailed_commits:
-                await self.repo.bulk_upsert_commit_details(detailed_commits, external_profile_id, repo.id)
-                await self.repo.update_repo_sync_time(repo.id)
+                await self.repo.bulk_upsert_commit_details(
+                    commit_data_list=detailed_commits, external_profile_id=external_profile_id, repo_db_id=repo.id
+                )
+                await self.repo.update_repo_sync_time(repo_db_id=repo.id)
             else:
                 logger.info("Could not fetch detailed commits fetched for repository: {}", repo.full_name)
 
@@ -468,7 +483,7 @@ class GithubService:
         tasks = []
 
         for repo_commit in repo_commits:
-            tasks.append(self.fetch_with_semaphore(client, repo_commit))
+            tasks.append(self.fetch_with_semaphore(client=client, commit=repo_commit))
 
         if not tasks:
             logger.info("No commit detail tasks to process.")
@@ -508,36 +523,36 @@ class GithubService:
             if not commit.url:
                 logger.warning("Commit URL is missing for commit SHA: {}", commit.sha)
                 return None
-            return await self.fetch_commit_detail(client, commit)
+            return await self.fetch_commit_detail(client=client, commit=commit)
 
     async def get_commits_by_repo_id(self, repo_id: int, user_id: int) -> list[Commit]:
         """Fetch commits from the database for a given repository ID."""
         external_profile = await self.external_profile_repo.get_external_profile_by_user_id(
-            user_id, PlatformEnum.GITHUB
+            user_id=user_id, platform=PlatformEnum.GITHUB
         )
         if not external_profile:
             raise GitHubIntegrationError(
                 Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub external profile not found"}
             )
-        return await self.repo.get_commits_by_repo_id(repo_id, external_profile.id)
+        return await self.repo.get_commits_by_repo_id(repo_id=repo_id, external_profile_id=external_profile.id)
 
     async def generate_timelines_from_github(self, token_data: TokenData) -> None:
         """Generate timelines for a GitHub user."""
         external_profile = await self.external_profile_repo.get_external_profile_by_user_id(
-            token_data.sub, PlatformEnum.GITHUB
+            user_id=token_data.sub, platform=PlatformEnum.GITHUB
         )
         if not external_profile:
             raise GitHubIntegrationError(
                 Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub external profile not found"}
             )
 
-        repos = await self.repo.get_db_repositories(external_profile.id)
+        repos = await self.repo.get_db_repositories(external_profile_id=external_profile.id)
         if not repos:
             logger.warning("No repositories found for external profile ID: {}", external_profile.id)
             return
 
         for repo in repos:
-            commits = await self.get_commits_by_repo_id(repo.id, token_data.sub)
+            commits = await self.get_commits_by_repo_id(repo_id=repo.id, user_id=token_data.sub)
             if commits:
                 timeline_create = TimelineCreate(
                     title=repo.name,
@@ -545,7 +560,7 @@ class GithubService:
                     is_public=False,
                 )
 
-                timeline = await self.timeline_service.create_timeline(timeline_create, token_data)
+                timeline = await self.timeline_service.create_timeline(timeline=timeline_create, token_data=token_data)
                 await self.timeline_service.generate_nodes_for_commits(
                     commits=commits, timeline_id=timeline.id, repo_id=repo.id
                 )
@@ -555,21 +570,23 @@ class GithubService:
         Iterates through all synced repositories and generates individual timelines.
         """
         external_profile = await self.external_profile_repo.get_external_profile_by_user_id(
-            token_data.sub, PlatformEnum.GITHUB
+            user_id=token_data.sub, platform=PlatformEnum.GITHUB
         )
         if not external_profile:
             raise GitHubIntegrationError(
                 Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub external profile not found"}
             )
 
-        repos = await self.repo.get_repositories_by_ids(external_profile.id, repository_ids)
+        repos = await self.repo.get_repositories_by_ids(
+            external_profile_id=external_profile.id, repo_ids=repository_ids
+        )
         print(f"Generating timelines for repositories with IDs: {repository_ids}")
         if not repos:
             logger.warning("No repositories found for external profile ID: {}", external_profile.id)
             return
 
         for repo in repos:
-            await self.generate_timeline_for_repo(repo, token_data)
+            await self.generate_timeline_for_repo(repo=repo, token_data=token_data)
 
         logger.info(
             "Completed timeline generation for all repositories of external profile ID: {}", external_profile.id
@@ -583,7 +600,7 @@ class GithubService:
             logger.error(f"Repository with ID {repo.id} not found in DB.")
             return
 
-        commits = await self.get_commits_by_repo_id(repo.id, token_data.sub)
+        commits = await self.get_commits_by_repo_id(repo_id=repo.id, user_id=token_data.sub)
         if not commits:
             logger.info(f"No commits found for {repo.name}. Skipping timeline creation.")
             return
@@ -596,7 +613,7 @@ class GithubService:
             is_public=False,
         )
 
-        timeline = await self.timeline_service.create_timeline(timeline_create, token_data)
+        timeline = await self.timeline_service.create_timeline(timeline=timeline_create, token_data=token_data)
 
         try:
             await self.timeline_service.generate_nodes_for_commits(
@@ -605,5 +622,5 @@ class GithubService:
         except Exception as e:
             logger.error(f"Error generating nodes for {repo.name}. Rolling back empty timeline.")
 
-            await self.timeline_service.delete_timeline(timeline.id)
+            await self.timeline_service.delete_timeline(timeline_id=timeline.id, user_id=token_data.sub)
             raise e

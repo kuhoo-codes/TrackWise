@@ -26,7 +26,7 @@ class SignificanceAnalyzerService:
         weighted_scores = []
 
         for file in files:
-            weight = self._get_file_weight(file.filename)
+            weight = self._get_file_weight(filename=file.filename)
             changes = file.additions + file.deletions
             effective_changes = min(changes, MAX_LINES_PER_FILE_CAP)
             weighted_scores.append(effective_changes * weight)
@@ -36,7 +36,7 @@ class SignificanceAnalyzerService:
         # A "Focus Factor" penalizes commits that are spread too thin across many files.
         focus_factor = 1.0 / math.log2(file_count + 1)
 
-        keyword_multiplier = self._check_keywords(message)
+        keyword_multiplier = self._check_keywords(message=message)
 
         avg_change = total_raw_score / file_count
         final_score = total_raw_score * focus_factor * keyword_multiplier

@@ -67,7 +67,7 @@ async def get_timelines(
     Get ALL timelines for the authenticated user.
     """
     token_data = auth_service.verify_token(token=credentials.credentials)
-    return await timeline_service.get_user_timelines(token_data.sub)
+    return await timeline_service.get_user_timelines(user_id=token_data.sub)
 
 
 @router.get("/{timeline_id}", status_code=status.HTTP_200_OK, response_model=TimelineSchema)
@@ -79,7 +79,7 @@ async def get_timeline(
 ) -> Timeline:
     """Get timeline for the authenticated user."""
     token_data = auth_service.verify_token(token=credentials.credentials)
-    return await timeline_service.get_timeline_details(timeline_id, token_data.sub)
+    return await timeline_service.get_timeline_details(timeline_id=timeline_id, user_id=token_data.sub)
 
 
 @router.delete("/{timeline_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -91,7 +91,7 @@ async def delete_timeline(
 ) -> None:
     """Delete timeline for the authenticated user."""
     token_data = auth_service.verify_token(token=credentials.credentials)
-    await timeline_service.delete_timeline(timeline_id, token_data.sub)
+    await timeline_service.delete_timeline(timeline_id=timeline_id, user_id=token_data.sub)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=TimelineSchema)
@@ -103,7 +103,7 @@ async def create_timeline(
 ) -> Timeline:
     """Create a new timeline."""
     token_data = auth_service.verify_token(token=credentials.credentials)
-    return await timeline_service.create_timeline(timeline, token_data)
+    return await timeline_service.create_timeline(timeline=timeline, token_data=token_data)
 
 
 @router.get("/node/{node_id}", status_code=status.HTTP_200_OK, response_model=TimelineNodeWithChildren)
@@ -115,7 +115,7 @@ async def get_timeline_node(
 ) -> TimelineNodeWithChildren:
     """Get a timeline node by ID."""
     auth_service.verify_token(token=credentials.credentials)
-    return await timeline_service.get_timeline_node_by_id(node_id)
+    return await timeline_service.get_timeline_node_by_id(node_id=node_id)
 
 
 @router.post("/node", status_code=status.HTTP_201_CREATED, response_model=TimelineNode)
@@ -128,7 +128,7 @@ async def create_timeline_node(
 ) -> TimelineNode:
     """Create a new timeline node."""
     token_data = auth_service.verify_token(token=credentials.credentials)
-    return await timeline_service.create_timeline_node(token_data.sub, timeline_node, media)
+    return await timeline_service.create_timeline_node(user_id=token_data.sub, timeline_node=timeline_node, media=media)
 
 
 @router.patch("/node/{node_id}", status_code=status.HTTP_200_OK, response_model=TimelineNode)
@@ -142,7 +142,9 @@ async def update_timeline_node(
 ) -> TimelineNode:
     """Update a timeline node."""
     token_data = auth_service.verify_token(token=credentials.credentials)
-    return await timeline_service.update_timeline_node(token_data.sub, node_id, timeline_node, media)
+    return await timeline_service.update_timeline_node(
+        user_id=token_data.sub, node_id=node_id, timeline_node=timeline_node, media=media
+    )
 
 
 @router.delete("/node/{node_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -154,4 +156,4 @@ async def delete_timeline_node(
 ) -> None:
     """Delete a timeline node."""
     token_data = auth_service.verify_token(token=credentials.credentials)
-    await timeline_service.delete_timeline_node(node_id, token_data.sub)
+    await timeline_service.delete_timeline_node(node_id=node_id, user_id=token_data.sub)

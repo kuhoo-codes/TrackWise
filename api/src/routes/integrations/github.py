@@ -56,7 +56,7 @@ async def get_github_auth_url(
 ) -> GithubAuthUrlResponse:
     """Generate GitHub OAuth URL"""
     token_data = auth_service.verify_token(token=credentials.credentials)
-    auth_url = await github_service.get_auth_url(token_data.sub)
+    auth_url = await github_service.get_auth_url(user_id=token_data.sub)
     return GithubAuthUrlResponse(authUrl=auth_url)
 
 
@@ -67,7 +67,7 @@ async def github_callback(
     github_service: Annotated[GithubService, Depends(get_github_service)],
 ) -> Response:
     """Handle GitHub OAuth callback"""
-    await github_service.handle_callback(code, state)
+    await github_service.handle_callback(code=code, state=state)
     return Response(status_code=status.HTTP_200_OK)
 
 
@@ -80,7 +80,7 @@ async def get_github_repositories(
     """Get all GitHub repositories for the user"""
     token_data = auth_service.verify_token(token=credentials.credentials)
     user_id = token_data.sub
-    return await github_service.get_all_repositories(user_id)
+    return await github_service.get_all_repositories(user_id=user_id)
 
 
 @router.get("/sync")
@@ -94,10 +94,10 @@ async def start_github_sync(
     token_data = auth_service.verify_token(token=credentials.credentials)
     user_id = token_data.sub
 
-    github_profile = await github_service.get_external_profile(user_id)
-    access_token = await github_service.get_valid_access_token(github_profile)
+    github_profile = await github_service.get_external_profile(user_id=user_id)
+    access_token = await github_service.get_valid_access_token(github_profile=github_profile)
 
-    lock_acquired = await github_service.attempt_sync_lock(github_profile.id)
+    lock_acquired = await github_service.attempt_sync_lock(profile_id=github_profile.id)
 
     if not lock_acquired:
         raise GitHubIntegrationError(
@@ -122,7 +122,7 @@ async def get_github_sync_status(
     token_data = auth_service.verify_token(token=credentials.credentials)
     user_id = token_data.sub
 
-    return await github_service.get_sync_status(user_id)
+    return await github_service.get_sync_status(user_id=user_id)
 
 
 @router.post("/timelines", status_code=202)
@@ -137,7 +137,7 @@ async def sync_github_timelines(
     Triggers the creation of timelines and nodes from all GitHub repositories of the user.
     """
     token_data = auth_service.verify_token(token=credentials.credentials)
-    locked_repo_ids = await github_service.repo.lock_repos_for_timeline_generation(repository_ids)
+    locked_repo_ids = await github_service.repo.lock_repos_for_timeline_generation(repo_ids=repository_ids)
 
     if not locked_repo_ids:
         return OperationStatusResponse(
