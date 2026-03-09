@@ -27,12 +27,12 @@ class GithubRepository:
         """Save GitHub OAuth `state` mapping to user_id in Redis for validation."""
         record = StateRecord(user_id=user_id, created_at=datetime.now())
         key = f"github:state:{state}"
-        redis_set(key, record, ex=self.access_token_expire_minutes * 60)
+        redis_set(key=key, value=record, ex=self.access_token_expire_minutes * 60)
 
     async def validate_state(self, state: Annotated[str, "GitHub OAuth state parameter to validate"]) -> StateRecord:
         """Validate a stored GitHub OAuth state and return its record."""
         key = f"github:state:{state}"
-        record = redis_get(key, model=StateRecord)
+        record = redis_get(key=key, model=StateRecord)
 
         if not record:
             raise GitHubIntegrationError(
@@ -42,7 +42,7 @@ class GithubRepository:
         if record.used:
             raise GitHubIntegrationError(Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "State already used"})
         record.used = True
-        redis_set(key, record)
+        redis_set(key=key, value=record)
 
         return record
 
@@ -56,14 +56,14 @@ class GithubRepository:
 
         self.token_store[key] = token
 
-        redis_set(key, token.model_dump_json(), ex=token.expires_in)
+        redis_set(key=key, value=token.model_dump_json(), ex=token.expires_in)
 
         return token
 
     async def get_token(self, user_id: Annotated[str, "User ID to retrieve token for"]) -> GithubToken:
         """Retrieve a GitHub access token for a given user from Redis."""
         key = f"github:token:{user_id}"
-        token = redis_get(key, model=GithubToken)
+        token = redis_get(key=key, model=GithubToken)
         if not token:
             raise GitHubIntegrationError(
                 Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub token not found"}

@@ -68,7 +68,7 @@ async def test_get_auth_url(
     auth_url = await github_service.get_auth_url(user_id)
 
     # --- Assert ---
-    mock_github_repo.save_state.assert_called_once_with("test_state_token", user_id)
+    mock_github_repo.save_state.assert_called_once_with(state="test_state_token", user_id=user_id)
 
     assert "https://github.com/login/oauth/authorize" in auth_url
     assert "client_id=" in auth_url
@@ -112,9 +112,9 @@ async def test_handle_callback_success(github_service: GithubService, mock_githu
         result = await github_service.handle_callback(code, state)
 
         # --- Assert ---
-        mock_github_repo.validate_state.assert_called_once_with(state)
+        mock_github_repo.validate_state.assert_called_once_with(state=state)
         mock_exchange.assert_called_once()
-        mock_github_repo.save_token.assert_called_once_with(user_id, token_data)
+        mock_github_repo.save_token.assert_called_once_with(user_id=user_id, token=token_data)
 
         assert isinstance(result, TokenResponse)
         assert result.access_token == "gh_token_123"
@@ -233,7 +233,7 @@ async def test_update_external_profile_token(
 
     result = await github_service.update_external_profile_token(external_profile, token)
 
-    mock_external_profile_repo.update_external_profile.assert_called_once_with(external_profile)
+    mock_external_profile_repo.update_external_profile.assert_called_once_with(external_profile=external_profile)
     assert external_profile.access_token == "new_token"
     assert result == "updated_profile"
 
@@ -433,10 +433,12 @@ async def test_get_commits_by_repo_id_success(
 
     # --- Assert ---
     # 1. Verify profile lookup
-    mock_external_profile_repo.get_external_profile_by_user_id.assert_called_once_with(user_id, PlatformEnum.GITHUB)
+    mock_external_profile_repo.get_external_profile_by_user_id.assert_called_once_with(
+        user_id=user_id, platform=PlatformEnum.GITHUB
+    )
 
     # 2. Verify repo lookup using the retrieved profile ID
-    mock_github_repo.get_commits_by_repo_id.assert_called_once_with(repo_id, profile_id)
+    mock_github_repo.get_commits_by_repo_id.assert_called_once_with(repo_id=repo_id, external_profile_id=profile_id)
 
     # 3. Verify final output
     assert result == mock_commits
@@ -507,8 +509,8 @@ async def test_generate_github_timelines_multiple_repos(
 
         # --- Assert ---
         assert mock_single_gen.call_count == 2
-        mock_single_gen.assert_any_call(repo1, token_data)
-        mock_single_gen.assert_any_call(repo2, token_data)
+        mock_single_gen.assert_any_call(repo=repo1, token_data=token_data)
+        mock_single_gen.assert_any_call(repo=repo2, token_data=token_data)
 
 
 @pytest.mark.asyncio
@@ -579,7 +581,9 @@ async def test_attempt_sync_lock_success(github_service: GithubService, mock_ext
     result = await github_service.attempt_sync_lock(profile_id)
 
     # --- Assert ---
-    mock_external_profile_repo.attempt_sync_lock.assert_called_once_with(profile_id, PlatformEnum.GITHUB)
+    mock_external_profile_repo.attempt_sync_lock.assert_called_once_with(
+        profile_id=profile_id, platform=PlatformEnum.GITHUB
+    )
     assert result is True
 
 
@@ -619,11 +623,11 @@ async def test_get_all_repositories_success(
         mock_github_repo.get_db_repositories.return_value = mock_repos
 
         # --- Execute ---
-        result = await github_service.get_all_repositories(user_id)
+        result = await github_service.get_all_repositories(user_id=user_id)
 
         # --- Assert ---
-        github_service.get_external_profile.assert_called_once_with(user_id)
-        mock_github_repo.get_db_repositories.assert_called_once_with(profile_id)
+        github_service.get_external_profile.assert_called_once_with(user_id=user_id)
+        mock_github_repo.get_db_repositories.assert_called_once_with(external_profile_id=profile_id)
         assert result == mock_repos
         assert len(result) == 2
 
@@ -638,6 +642,6 @@ async def test_get_all_repositories_no_external_profile(
     with patch.object(github_service, "get_external_profile", return_value=None):
         # --- Execute & Assert ---
         with pytest.raises(GitHubIntegrationError) as exc:
-            await github_service.get_all_repositories(user_id)
+            await github_service.get_all_repositories(user_id=user_id)
 
         assert exc.value.details["error"] == "GitHub external profile not found"

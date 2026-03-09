@@ -62,7 +62,7 @@ async def test_create_user_success(auth_service: AuthService, mock_user_repo: As
 
     # --- Assert ---
     assert result.email == user_data.email
-    mock_user_repo.get_user_by_email.assert_called_once_with(user_data.email)
+    mock_user_repo.get_user_by_email.assert_called_once_with(email=user_data.email)
     mock_user_repo.create_user.assert_called_once()
 
 
@@ -77,7 +77,7 @@ async def test_create_user_already_exists(auth_service: AuthService, mock_user_r
         await auth_service.create_user(user_data)
 
     # --- Assert ---
-    mock_user_repo.get_user_by_email.assert_called_once_with(user_data.email)
+    mock_user_repo.get_user_by_email.assert_called_once_with(email=user_data.email)
     mock_user_repo.create_user.assert_not_called()
 
 
@@ -99,7 +99,7 @@ async def test_authenticate_user_success(auth_service: AuthService, mock_user_re
 
     # --- Assert ---
     assert authenticated_user.email == email
-    mock_user_repo.get_user_by_email.assert_called_once_with(email)
+    mock_user_repo.get_user_by_email.assert_called_once_with(email=email)
 
 
 @pytest.mark.asyncio

@@ -31,7 +31,7 @@ class TimelineService:
     # Timeline Methods
     async def get_user_timelines(self, user_id: int) -> list[Timeline]:
         """Returns the list of timelines (Dashbord View)."""
-        return await self.timeline_repo.get_timelines_by_user_id(user_id)
+        return await self.timeline_repo.get_timelines_by_user_id(user_id=user_id)
 
     async def get_timeline_details(self, timeline_id: int, user_id: int) -> TimelineSchema:
         """
@@ -40,7 +40,7 @@ class TimelineService:
         2. Sort by Date
         3. Rebuild Tree (Parent -> Children)
         """
-        timeline = await self.timeline_repo.get_timeline_with_nodes(timeline_id, user_id)
+        timeline = await self.timeline_repo.get_timeline_with_nodes(timeline_id=timeline_id, user_id=user_id)
 
         if not timeline:
             raise TimelineNotFoundError(Errors.TIMELINE_NOT_FOUND.value)
@@ -90,20 +90,20 @@ class TimelineService:
             default_zoom_level=timeline.default_zoom_level,
             user_id=token_data.sub,
         )
-        return await self.timeline_repo.create_timeline(timeline_db)
+        return await self.timeline_repo.create_timeline(timeline=timeline_db)
 
     async def delete_timeline(self, timeline_id: int, user_id: int) -> None:
         """Delete a timeline."""
-        timeline = await self.timeline_repo.get_timeline_by_id(timeline_id, user_id)
+        timeline = await self.timeline_repo.get_timeline_by_id(timeline_id=timeline_id, user_id=user_id)
         if not timeline:
             raise TimelineNotFoundError(Errors.TIMELINE_NOT_FOUND.value, details={"timeline_id": timeline_id})
 
-        await self.timeline_repo.delete_timeline(timeline_id)
+        await self.timeline_repo.delete_timeline(timeline_id=timeline_id)
 
     # Timeline Node Methods
     async def get_timeline_node_by_id(self, node_id: int) -> TimelineNodeWithChildren:
         """Get a timeline node by ID."""
-        node = await self.timeline_repo.get_timeline_node_by_id(node_id)
+        node = await self.timeline_repo.get_timeline_node_by_id(node_id=node_id)
         if not node:
             raise TimelineNodeNotFoundError(Errors.TIMELINE_NODE_NOT_FOUND.value, details={"node_id": node_id})
         return node
@@ -112,7 +112,7 @@ class TimelineService:
         self, user_id: int, timeline_node: TimelineNodeCreate, media: UploadFile | None
     ) -> TimelineNode:
         """Create a new timeline."""
-        timeline = await self.timeline_repo.get_timeline_by_id(timeline_node.timeline_id, user_id)
+        timeline = await self.timeline_repo.get_timeline_by_id(timeline_id=timeline_node.timeline_id, user_id=user_id)
         if not timeline:
             raise TimelineNotFoundError(
                 Errors.TIMELINE_NOT_FOUND.value, details={"timeline_id": timeline_node.timeline_id}
@@ -121,7 +121,9 @@ class TimelineService:
         self._validate_dates(timeline_node)
 
         if timeline_node.parent_id:
-            await self._validate_parent_hierarchy(timeline_node.parent_id, timeline_node, timeline_node.timeline_id)
+            await self._validate_parent_hierarchy(
+                parent_id=timeline_node.parent_id, child_node=timeline_node, timeline_id=timeline_node.timeline_id
+            )
 
         timeline_node_db = TimelineNode(
             timeline_id=timeline_node.timeline_id,
@@ -148,18 +150,23 @@ class TimelineService:
             media_type = media.content_type
             media_filename = media.filename
 
-        return await self.timeline_repo.create_timeline_node(timeline_node_db, media_bytes, media_type, media_filename)
+        return await self.timeline_repo.create_timeline_node(
+            timeline_node=timeline_node_db,
+            media_bytes=media_bytes,
+            media_type=media_type,
+            media_filename=media_filename,
+        )
 
     async def update_timeline_node(
         self, user_id: int, node_id: int, timeline_node: TimelineNodeBase, media: UploadFile | None = None
     ) -> TimelineNode:
         """Update a timeline node."""
-        existing_node = await self.get_timeline_node_by_id(node_id)
-        timeline = await self.timeline_repo.get_timeline_by_id(existing_node.timeline_id, user_id)
+        existing_node = await self.get_timeline_node_by_id(node_id=node_id)
+        timeline = await self.timeline_repo.get_timeline_by_id(timeline_id=existing_node.timeline_id, user_id=user_id)
         if not existing_node or not timeline:
             raise TimelineNodeNotFoundError(Errors.TIMELINE_NODE_NOT_FOUND.value, details={"node_id": node_id})
 
-        self._validate_dates(timeline_node)
+        self._validate_dates(timeline_node=timeline_node)
 
         if timeline_node.parent_id == node_id:
             raise InvalidTimelineNodeError(
@@ -171,7 +178,9 @@ class TimelineService:
             )
 
         if timeline_node.parent_id:
-            await self._validate_parent_hierarchy(timeline_node.parent_id, timeline_node, existing_node.timeline_id)
+            await self._validate_parent_hierarchy(
+                parent_id=timeline_node.parent_id, child_node=timeline_node, timeline_id=existing_node.timeline_id
+            )
 
         existing_node.title = timeline_node.title
         existing_node.short_summary = timeline_node.short_summary
@@ -195,18 +204,18 @@ class TimelineService:
         elif existing_node.media:
             existing_node.media.clear()
 
-        return await self.timeline_repo.update_timeline_node(node_id, existing_node)
+        return await self.timeline_repo.update_timeline_node(node_id=node_id, timelineNode=existing_node)
 
     async def delete_timeline_node(self, node_id: int, user_id: int) -> None:
         """Delete a timeline node"""
-        existing_node = await self.timeline_repo.get_timeline_node_lite(node_id)
+        existing_node = await self.timeline_repo.get_timeline_node_lite(node_id=node_id)
         if not existing_node:
             raise TimelineNodeNotFoundError(Errors.TIMELINE_NODE_NOT_FOUND.value, details={"node_id": node_id})
-        timeline = await self.timeline_repo.get_timeline_by_id(existing_node.timeline_id, user_id)
+        timeline = await self.timeline_repo.get_timeline_by_id(timeline_id=existing_node.timeline_id, user_id=user_id)
         if not timeline:
             raise TimelineNodeNotFoundError(Errors.TIMELINE_NODE_NOT_FOUND.value, details={"node_id": node_id})
 
-        await self.timeline_repo.delete_timeline_node(node_id)
+        await self.timeline_repo.delete_timeline_node(node_id=node_id)
 
     async def generate_nodes_for_commits(
         self, commits: list[Commit], timeline_id: int, repo_id: int, user_id: int
@@ -217,12 +226,12 @@ class TimelineService:
 
         last_parent: TimelineNode | None = None
 
-        clusters = self.clustering_service.cluster_commits(commits)
+        clusters = self.clustering_service.cluster_commits(commits=commits)
         for cluster in clusters:
             if cluster.is_shallow:
                 continue
             try:
-                ai_result: AnalysisResult = await self.ai_service.analyze_cluster(cluster, repo_id)
+                ai_result: AnalysisResult = await self.ai_service.analyze_cluster(cluster=cluster, repo_id=repo_id)
 
                 if ai_result.action == AnalysisAction.IGNORE:
                     logger.info(f"AI ignored cluster: {cluster.topic} - Reasoning: {ai_result.reasoning}")
@@ -307,7 +316,7 @@ class TimelineService:
     ) -> None:
         """Validates relationships between a child node and its requested parent."""
 
-        parent_node = await self.timeline_repo.get_timeline_node_lite(parent_id)
+        parent_node = await self.timeline_repo.get_timeline_node_lite(node_id=parent_id)
         if not parent_node:
             raise TimelineNodeNotFoundError(Errors.TIMELINE_NODE_NOT_FOUND.value, details={"parent_id": parent_id})
 

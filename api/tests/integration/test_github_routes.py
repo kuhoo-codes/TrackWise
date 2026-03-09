@@ -307,7 +307,7 @@ def test_get_github_repositories_success(
         assert data[0]["name"] == "repo-one"
         assert data[1]["is_fork"] is True
 
-        mock_get_repos.assert_awaited_once_with(appa_id)
+        mock_get_repos.assert_awaited_once_with(user_id=appa_id)
 
 
 def test_get_github_repositories_empty(
@@ -335,7 +335,7 @@ def test_get_github_repositories_empty(
         assert response.status_code == 200
         assert data == []
 
-        mock_get_repos.assert_awaited_once_with(appa_id)
+        mock_get_repos.assert_awaited_once_with(user_id=appa_id)
 
 
 def test_get_github_repositories_unauthorized(
@@ -381,7 +381,7 @@ def test_generate_github_timelines_success(
         assert data["status"] == "accepted"
         assert "started" in data["message"]
 
-        mock_lock.assert_awaited_once_with([1, 2, 3])
+        mock_lock.assert_awaited_once_with(repo_ids=[1, 2, 3])
         mock_generate.assert_called_once()
 
 
@@ -412,7 +412,7 @@ def test_generate_github_timelines_all_locked(
         assert data["status"] == "queued"
         assert "currently being processed" in data["message"]
 
-        mock_lock.assert_awaited_once_with([1, 2])
+        mock_lock.assert_awaited_once_with(repo_ids=[1, 2])
 
 
 def test_generate_github_timelines_unauthorized(

@@ -133,7 +133,7 @@ class TimelineRepository:
 
         if not clean_values:
             # Nothing to update
-            return await self.get_timeline_node_lite(node_id)
+            return await self.get_timeline_node_lite(node_id=node_id)
 
         stmt = (
             update(TimelineNode)

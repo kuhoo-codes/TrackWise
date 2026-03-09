@@ -50,7 +50,7 @@ class AuthService:
     def verify_token(self, token: str) -> TokenData:
         """Verify and decode JWT token."""
         try:
-            if self.is_token_blacklisted(token):
+            if self.is_token_blacklisted(token=token):
                 raise TokenExpiredError(Errors.TOKEN_EXPIRED.value)
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
             user_id = payload.get("sub")
@@ -67,12 +67,12 @@ class AuthService:
     async def create_user(self, user_data: UserCreate) -> User:
         """Create a new user."""
         # Check if user already exists
-        existing_user = await self.user_repo.get_user_by_email(user_data.email)
+        existing_user = await self.user_repo.get_user_by_email(email=user_data.email)
         if existing_user:
             raise UserAlreadyExistsError(Errors.USER_ALREADY_EXISTS.value, details={"email": user_data.email})
 
         # Hash password and create user
-        hashed_password = self.hash_password(user_data.password)
+        hashed_password = self.hash_password(password=user_data.password)
         db_user = User(
             email=user_data.email,
             name=user_data.name,
@@ -81,24 +81,24 @@ class AuthService:
             updated_at=datetime.now(),
         )
 
-        return await self.user_repo.create_user(db_user)
+        return await self.user_repo.create_user(user=db_user)
 
     async def authenticate_user(self, email: str, password: str) -> User:
         """Authenticate user and return access token."""
         # Get user by email
-        user = await self.user_repo.get_user_by_email(email)
+        user = await self.user_repo.get_user_by_email(email=email)
         if not user:
             raise AuthenticationError(Errors.INVALID_EMAIL_OR_PASSWORD.value, details={"email": email})
 
         # Verify password
-        if not self.verify_password(password, user.hashed_password):
+        if not self.verify_password(plain_password=password, hashed_password=user.hashed_password):
             raise AuthenticationError(Errors.INVALID_EMAIL_OR_PASSWORD.value, details={"email": email})
 
         return user
 
     async def get_user_by_email(self, email: str) -> User:
         """Get user by email."""
-        user = await self.user_repo.get_user_by_email(email)
+        user = await self.user_repo.get_user_by_email(email=email)
         if not user:
             raise UserNotFoundError(Errors.USER_NOT_FOUND.value, details={"email": email})
         return user
