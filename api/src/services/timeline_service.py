@@ -247,6 +247,7 @@ class TimelineService:
                         )
 
                     node_data.github_repo_id = repo_id
+                    node_data.github_pr_id = None
                     if node_data.end_date is not None:
                         node_data.is_current = False
 
