@@ -3,7 +3,9 @@ import { Routes, Route, Navigate, Link, useParams } from "react-router-dom";
 import { Login, Signup } from "@/features/auth";
 import { Dashboard } from "@/features/dashboard";
 import { GithubCallback } from "@/features/dashboard/pages/githubCallback";
+import { Integrations } from "@/features/integration/pages/integration";
 import { Timeline } from "@/features/timeline/pages/timeline";
+import { AppLayout } from "@/shared/components/layout/appLayout";
 import { Layout } from "@/shared/components/layout/layout";
 import { ProtectedRoute } from "./protectedRoute";
 import { ROUTES } from "./routes";
@@ -23,65 +25,48 @@ const TimelinePageWrapper: React.FC = () => {
 
 export const AppRouter: React.FC = () => (
   <Routes>
-    {/* --- Public Routes --- */}
+    {/* --- PUBLIC ROUTES --- */}
     <Route
       path={ROUTES.LOGIN}
       element={
-        <Layout>
+        <ProtectedRoute requireAuth={false}>
           <Login />
-        </Layout>
+        </ProtectedRoute>
       }
     />
     <Route
       path={ROUTES.SIGNUP}
       element={
         <ProtectedRoute requireAuth={false}>
-          <Layout>
-            <Signup />
-          </Layout>
+          <Signup />
         </ProtectedRoute>
       }
     />
 
-    {/* --- Protected Routes --- */}
-
+    {/* --- AUTHENTICATED ROUTES (With Sidebar/TopBar) --- */}
     <Route
-      path={ROUTES.DASHBOARD}
       element={
         <ProtectedRoute requireAuth>
-          <Layout>
-            <Dashboard />
-          </Layout>
+          <AppLayout />
         </ProtectedRoute>
       }
-    />
+    >
+      <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
+      <Route
+        path={`${ROUTES.TIMELINE}/:timelineId`}
+        element={<TimelinePageWrapper />}
+      />
+      <Route path={ROUTES.GITHUB_CALLBACK} element={<GithubCallback />} />
 
-    <Route
-      path={ROUTES.GITHUB_CALLBACK}
-      element={
-        <ProtectedRoute requireAuth>
-          <Layout>
-            <GithubCallback />
-          </Layout>
-        </ProtectedRoute>
-      }
-    />
+      <Route path="/integrations" element={<Integrations />} />
+      <Route path="/settings" element={<div>Settings Page</div>} />
+    </Route>
 
+    {/* --- REDIRECTS --- */}
+    <Route path="/" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
     <Route
-      path={`${ROUTES.TIMELINE}/:timelineId`}
-      element={
-        <ProtectedRoute requireAuth>
-          <Layout>
-            <TimelinePageWrapper />
-          </Layout>
-        </ProtectedRoute>
-      }
-    />
-
-    {/* Root redirect */}
-    <Route
-      path={ROUTES.HOME}
-      element={<Navigate to={ROUTES.DASHBOARD} replace />}
+      path="*"
+      element={<div className="p-20 text-center">404: Not Found</div>}
     />
 
     {/* Catch all - 404 */}
