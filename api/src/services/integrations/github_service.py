@@ -622,5 +622,6 @@ class GithubService:
         except Exception as e:
             logger.error(f"Error generating nodes for {repo.name}. Rolling back empty timeline.")
 
+            await self.repo.db.rollback()
             await self.timeline_service.delete_timeline(timeline_id=timeline.id, user_id=token_data.sub)
             raise e
