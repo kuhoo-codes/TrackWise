@@ -8,6 +8,8 @@ export const ROUTES = {
   DASHBOARD: "/dashboard",
   TIMELINE: "/timeline",
   GITHUB_CALLBACK: "/github/callback",
+  INTEGRATIONS: "/integrations",
+  SETTINGS: "/settings",
 
   // Error routes
   NOT_FOUND: "/404",

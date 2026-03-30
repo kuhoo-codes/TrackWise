@@ -1,10 +1,9 @@
 import React from "react";
 import { Routes, Route, Navigate, Link, useParams } from "react-router-dom";
 import { Login, Signup } from "@/features/auth";
-import { Dashboard } from "@/features/dashboard";
-import { GithubCallback } from "@/features/dashboard/pages/githubCallback";
-import { Integrations } from "@/features/integration/pages/integration";
-import { Timeline } from "@/features/timeline/pages/timeline";
+import { Dashboard, GithubCallback } from "@/features/dashboard";
+import { Integrations } from "@/features/integration";
+import { Timeline } from "@/features/timeline";
 import { AppLayout } from "@/shared/components/layout/appLayout";
 import { Layout } from "@/shared/components/layout/layout";
 import { ProtectedRoute } from "./protectedRoute";
@@ -58,8 +57,8 @@ export const AppRouter: React.FC = () => (
       />
       <Route path={ROUTES.GITHUB_CALLBACK} element={<GithubCallback />} />
 
-      <Route path="/integrations" element={<Integrations />} />
-      <Route path="/settings" element={<div>Settings Page</div>} />
+      <Route path={ROUTES.INTEGRATIONS} element={<Integrations />} />
+      <Route path={ROUTES.SETTINGS} element={<div>Settings Page</div>} />
     </Route>
 
     {/* --- REDIRECTS --- */}
