@@ -46,6 +46,14 @@ export class GithubService {
     }
   }
 
+  static async disconnect(): Promise<void> {
+    try {
+      await api.delete(`/integrations/github`);
+    } catch (error) {
+      throw handleServiceError(error);
+    }
+  }
+
   static async getRepositories(): Promise<GithubRepository[]> {
     try {
       const response = await api.get(`/integrations/github/repositories`);
