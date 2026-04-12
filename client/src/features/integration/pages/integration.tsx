@@ -1,5 +1,6 @@
 import { ExternalLink, RefreshCw, AlertCircle } from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
+import { DisconnectConfirmationModal } from "@/features/integration/components/disconnectConfirmationModal";
 import { SYNC_STATUS } from "@/services/types";
 import { GithubInvertocat } from "@/shared/components/ui/asset/githubLogo";
 import { useGithubConnect } from "@/shared/hooks/useGithubConnect";
@@ -11,7 +12,21 @@ export const Integrations: React.FC = () => {
     lastSyncedAt,
     triggerSync,
     redirectToGithub,
+    disconnect,
   } = useGithubConnect();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleConfirmedDisconnect = async () => {
+    setIsProcessing(true);
+    try {
+      await disconnect();
+      setIsModalOpen(false);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div className="p-10 max-w-4xl mx-auto">
@@ -72,7 +87,10 @@ export const Integrations: React.FC = () => {
                     className={`w-4 h-4 ${syncStatus === SYNC_STATUS.SYNCING ? "animate-spin" : ""}`}
                   />
                 </button>
-                <button className="text-xs text-red-500 hover:underline px-2">
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="text-xs text-red-500 hover:underline px-2"
+                >
                   Disconnect
                 </button>
               </div>
@@ -105,6 +123,14 @@ export const Integrations: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* --- DISCONNECT CONFIRMATION MODAL --- */}
+      <DisconnectConfirmationModal
+        isOpen={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onConfirm={handleConfirmedDisconnect}
+        isDisconnecting={isProcessing}
+      />
     </div>
   );
 };

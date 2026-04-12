@@ -116,6 +116,25 @@ export const useGithubConnect = () => {
     void navigate(ROUTES.DASHBOARD, { replace: true });
   }, [navigate]);
 
+  const disconnect = useCallback(async () => {
+    try {
+      await GithubService.disconnect();
+
+      setIsConnected(false);
+      setSyncStatus(SYNC_STATUS.IDLE);
+      setLastSyncedAt(null);
+
+      // Stop polling if it was running
+      if (pollingTimerRef.current) {
+        clearInterval(pollingTimerRef.current);
+      }
+
+      toast.success("GitHub disconnected successfully.");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to disconnect GitHub."));
+    }
+  }, []);
+
   return {
     isConnected,
     isRedirecting,
@@ -125,5 +144,6 @@ export const useGithubConnect = () => {
     processCallback,
     handleMissingParams,
     triggerSync,
+    disconnect,
   };
 };
