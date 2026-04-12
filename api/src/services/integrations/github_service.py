@@ -625,3 +625,46 @@ class GithubService:
             await self.repo.db.rollback()
             await self.timeline_service.delete_timeline(timeline_id=timeline.id, user_id=token_data.sub)
             raise e
+
+    async def revoke_github_access(self, access_token: str) -> None:
+        """
+        Tells GitHub to invalidate the access token and the
+        entire grant for this user.
+        """
+
+        url = f"{self.GITHUB_API_URL}/{self.GITHUB_ROUTES.APPLICATIONS}/{settings.GITHUB_CLIENT_ID}/grant"
+
+        async with httpx.AsyncClient() as client:
+            response = await client.request(
+                "DELETE",  # Be explicit here
+                url,
+                auth=(settings.GITHUB_CLIENT_ID, settings.GITHUB_CLIENT_SECRET),
+                json={"access_token": access_token},  # Now 'json' will be accepted
+                headers={"Accept": "application/vnd.github+json"},
+            )
+
+            response.raise_for_status()
+
+    async def disconnect_github(self, user_id: int) -> None:
+        """Disconnect GitHub by deleting the external profile and all related data."""
+        external_profile = await self.external_profile_repo.get_external_profile_by_user_id(
+            user_id=user_id, platform=PlatformEnum.GITHUB
+        )
+        if not external_profile:
+            raise GitHubIntegrationError(
+                Errors.GITHUB_INTEGRATION_ERROR.value, details={"error": "GitHub external profile not found"}
+            )
+
+        try:
+            if external_profile.access_token:
+                await self.revoke_github_access(external_profile.access_token)
+        except Exception as e:
+            logger.warning(f"Could not revoke GitHub token for user {user_id}: {str(e)}")
+
+        # Because of ondelete="CASCADE" in your models, this automatically deletes:
+        # - github_repositories
+        # - github_commits
+        # - github_issues
+        await self.external_profile_repo.delete_external_profile(profile_id=external_profile.id)
+
+        logger.info(f"Successfully disconnected GitHub and cleared data for user {user_id}")
