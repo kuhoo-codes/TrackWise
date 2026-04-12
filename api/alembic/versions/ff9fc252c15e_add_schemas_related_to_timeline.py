@@ -53,7 +53,7 @@ def upgrade() -> None:
     sa.Column('parent_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['github_repo_id'], ['github_repositories.id'], ),
+    sa.ForeignKeyConstraint(['github_repo_id'], ['github_repositories.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['parent_id'], ['timeline_nodes.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['timeline_id'], ['timelines.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')

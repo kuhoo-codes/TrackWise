@@ -38,7 +38,7 @@ class TimelineNode(Base, TimestampMixin):
     end_date = Column(DateTime(timezone=True), nullable=True)
     is_current = Column(Boolean, default=False)
     date_granularity = Column(SAEnum(DateGranularity), default=DateGranularity.EXACT)
-    github_repo_id = Column(Integer, ForeignKey("github_repositories.id"), nullable=True)
+    github_repo_id = Column(Integer, ForeignKey("github_repositories.id", ondelete="SET NULL"), nullable=True)
     github_pr_id = Column(Integer, nullable=True)
     parent_id = Column(Integer, ForeignKey("timeline_nodes.id", ondelete="CASCADE"), nullable=True)
 
