@@ -645,3 +645,124 @@ async def test_get_all_repositories_no_external_profile(
             await github_service.get_all_repositories(user_id=user_id)
 
         assert exc.value.details["error"] == "GitHub external profile not found"
+
+
+@pytest.mark.asyncio
+@patch("src.services.integrations.github_service.httpx.AsyncClient")
+async def test_revoke_github_access_success(mock_async_client: MagicMock, github_service: GithubService) -> None:
+    """Test successful revocation of GitHub access token."""
+    # --- Setup ---
+    access_token = "gho_test_token_123"
+    mock_response = MagicMock()
+    mock_response.status_code = 204
+    mock_response.raise_for_status.return_value = None
+
+    # Configure the async client mock
+    async_instance = mock_async_client.return_value.__aenter__.return_value
+    async_instance.request = AsyncMock(return_value=mock_response)
+
+    # --- Execute ---
+    await github_service.revoke_github_access(access_token)
+
+    # --- Assert ---
+    async_instance.request.assert_called_once()
+    args, kwargs = async_instance.request.call_args
+
+    assert args[0] == "DELETE"
+    assert "/applications/" in args[1]
+    assert "/grant" in args[1]
+    assert kwargs["json"] == {"access_token": access_token}
+    assert "Authorization" not in kwargs["headers"]  # Auth is handled via 'auth' param
+    assert kwargs["auth"] is not None
+
+
+@pytest.mark.asyncio
+@patch("src.services.integrations.github_service.httpx.AsyncClient")
+async def test_revoke_github_access_api_error(mock_async_client: MagicMock, github_service: GithubService) -> None:
+    """Test that revoke_github_access raises if GitHub returns an error."""
+    # --- Setup ---
+    mock_response = MagicMock()
+    mock_response.raise_for_status.side_effect = Exception("API Error")
+
+    async_instance = mock_async_client.return_value.__aenter__.return_value
+    async_instance.request = AsyncMock(return_value=mock_response)
+
+    # --- Execute & Assert ---
+    with pytest.raises(Exception, match="API Error"):
+        await github_service.revoke_github_access("bad_token")
+
+
+@pytest.mark.asyncio
+async def test_disconnect_github_full_success(
+    github_service: GithubService, mock_external_profile_repo: AsyncMock
+) -> None:
+    """Test successful disconnect including token revocation."""
+    # --- Setup ---
+    user_id = 1
+    profile_id = 10
+    mock_profile = MagicMock(spec=ExternalProfile)
+    mock_profile.id = profile_id
+    mock_profile.access_token = "valid_token"
+
+    mock_external_profile_repo.get_external_profile_by_user_id.return_value = mock_profile
+
+    with patch.object(github_service, "revoke_github_access", new_callable=AsyncMock) as mock_revoke:
+        # --- Execute ---
+        await github_service.disconnect_github(user_id)
+
+        # --- Assert ---
+        mock_revoke.assert_called_once_with("valid_token")
+        mock_external_profile_repo.delete_external_profile.assert_called_once_with(profile_id=profile_id)
+
+
+@pytest.mark.asyncio
+async def test_disconnect_github_revocation_fails_still_deletes(
+    github_service: GithubService, mock_external_profile_repo: AsyncMock
+) -> None:
+    """Test that if GitHub API fails, we still delete the local profile."""
+    # --- Setup ---
+    user_id = 1
+    mock_profile = MagicMock(id=10, access_token="token")
+    mock_external_profile_repo.get_external_profile_by_user_id.return_value = mock_profile
+
+    with patch.object(github_service, "revoke_github_access", side_effect=Exception("GitHub Down")):
+        # --- Execute ---
+        await github_service.disconnect_github(user_id)
+
+        # --- Assert ---
+        # Should not raise exception, should log warning and proceed
+        mock_external_profile_repo.delete_external_profile.assert_called_once_with(profile_id=10)
+
+
+@pytest.mark.asyncio
+async def test_disconnect_github_no_token_skips_revocation(
+    github_service: GithubService, mock_external_profile_repo: AsyncMock
+) -> None:
+    """Test that we skip revocation if there is no access token stored."""
+    # --- Setup ---
+    mock_profile = MagicMock(id=10, access_token=None)
+    mock_external_profile_repo.get_external_profile_by_user_id.return_value = mock_profile
+
+    with patch.object(github_service, "revoke_github_access", new_callable=AsyncMock) as mock_revoke:
+        # --- Execute ---
+        await github_service.disconnect_github(1)
+
+        # --- Assert ---
+        mock_revoke.assert_not_called()
+        mock_external_profile_repo.delete_external_profile.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_disconnect_github_profile_not_found(
+    github_service: GithubService, mock_external_profile_repo: AsyncMock
+) -> None:
+    """Test that an error is raised if the profile doesn't exist."""
+    # --- Setup ---
+    mock_external_profile_repo.get_external_profile_by_user_id.return_value = None
+
+    # --- Execute & Assert ---
+    with pytest.raises(GitHubIntegrationError) as exc:
+        await github_service.disconnect_github(999)
+
+    # Access the 'details' attribute instead of the string representation
+    assert exc.value.details["error"] == "GitHub external profile not found"

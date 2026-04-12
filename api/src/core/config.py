@@ -29,6 +29,7 @@ class GithubRoutes(str, Enum):
     USER: str = "user"
     USERS: str = "users"
     COMMITS: str = "commits"
+    APPLICATIONS: str = "applications"
 
 
 class Settings(BaseSettings):

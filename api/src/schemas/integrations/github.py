@@ -187,6 +187,7 @@ class OperationStatusEnum(str, Enum):
     accepted = "accepted"
     started = "started"
     queued = "queued"
+    completed = "completed"
 
 
 class OperationStatusResponse(BaseModel):

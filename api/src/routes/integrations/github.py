@@ -152,3 +152,19 @@ async def sync_github_timelines(
         message="Timeline generation for all repositories started in the background.",
         status=OperationStatusEnum.accepted,
     )
+
+
+@router.delete("", status_code=status.HTTP_200_OK)
+async def disconnect_github(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    github_service: Annotated[GithubService, Depends(get_github_service)],
+) -> OperationStatusResponse:
+    """Disconnect GitHub account and remove all related data"""
+    token_data = auth_service.verify_token(token=credentials.credentials)
+    user_id = token_data.sub
+    await github_service.disconnect_github(user_id=user_id)
+    return OperationStatusResponse(
+        message="GitHub account disconnected successfully.",
+        status=OperationStatusEnum.completed,
+    )

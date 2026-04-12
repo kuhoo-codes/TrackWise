@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.integrations import ExternalProfile, PlatformEnum, SyncStatusEnum, SyncStepEnum
@@ -97,3 +97,12 @@ class ExternalProfileRepository:
         result = await self.db.execute(stmt)
         await self.db.commit()
         return result.scalar_one()
+
+    async def delete_external_profile(self, profile_id: int) -> bool:
+        """Delete an external profile from the database."""
+        stmt = delete(ExternalProfile).where(ExternalProfile.id == profile_id)
+        result = await self.db.execute(stmt)
+        await self.db.commit()
+
+        # Returns True if a row was actually deleted, False otherwise
+        return result.rowcount > 0
