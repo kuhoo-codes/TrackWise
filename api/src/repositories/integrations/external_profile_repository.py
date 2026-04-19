@@ -22,8 +22,8 @@ class ExternalProfileRepository:
         self, user_id: Annotated[int, "The user's ID (foreign key)"], platform: PlatformEnum
     ) -> ExternalProfile | None:
         """Fetch an external profile for a given user and platform."""
-        statement = select(ExternalProfile).filter(
-            ExternalProfile.user_id == user_id and ExternalProfile.platform == platform
+        statement = select(ExternalProfile).where(
+            ExternalProfile.user_id == user_id, ExternalProfile.platform == platform
         )
         result = await self.db.execute(statement)
         return result.scalar_one_or_none()
