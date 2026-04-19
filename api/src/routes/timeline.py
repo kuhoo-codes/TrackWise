@@ -5,11 +5,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import Json
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.config import settings
 from src.db.database import get_db
 from src.models.timelines import Timeline
-from src.repositories.timeline_repository import TimelineRepository
-from src.repositories.user_repository import UserRepository
+from src.routes.auth import get_auth_service
 from src.schemas.timelines import Timeline as TimelineSchema
 from src.schemas.timelines import (
     TimelineCreate,
@@ -20,10 +18,7 @@ from src.schemas.timelines import (
     TimelineSummary,
 )
 from src.services.auth_service import AuthService
-from src.services.integrations.ai.providers.gemini_provider import GeminiProvider
-from src.services.integrations.ai.providers.ollama_provider import OllamaProvider
-from src.services.integrations.ai.timeline_analysis_service import TimelineAnalysisService
-from src.services.integrations.analysis.activity_clustering_service import ActivityClusteringService
+from src.services.factory import ServiceFactory
 from src.services.timeline_service import TimelineService
 
 router = APIRouter(tags=["Timeline"], prefix="/timelines")
@@ -32,29 +27,7 @@ security = HTTPBearer()
 
 def get_timeline_service(db: Annotated[AsyncSession, Depends(get_db)]) -> TimelineService:
     """Dependency to get TimelineService with all required sub-services."""
-
-    # 1. Initialize Repository
-    repo = TimelineRepository(db)
-
-    # 2. Initialize Clustering Logic (Phase 2)
-    clustering = ActivityClusteringService()
-
-    # 3. Initialize AI Provider (Phase 3)
-    # Switch this to GeminiProvider(settings.GEMINI_API_KEY) for production
-    if settings.ENVIRONMENT == "development":
-        ai_provider = OllamaProvider()
-    else:
-        ai_provider = GeminiProvider(api_key=settings.GEMINI_API_KEY)
-
-    ai_service = TimelineAnalysisService(provider=ai_provider)
-
-    # 4. Return the fully composed Service
-    return TimelineService(timeline_repo=repo, clustering_service=clustering, ai_service=ai_service)
-
-
-def get_auth_service(db: Annotated[AsyncSession, Depends(get_db)]) -> AuthService:
-    """Dependency to get AuthService with database session."""
-    return AuthService(UserRepository(db))
+    return ServiceFactory.create_timeline_service(db)
 
 
 @router.get("/", status_code=status.HTTP_200_OK, response_model=list[TimelineSummary])

@@ -7,10 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config import Errors
 from src.db.database import get_db
 from src.exceptions.external import GitHubIntegrationError
-from src.repositories.integrations.external_profile_repository import ExternalProfileRepository
-from src.repositories.integrations.github_repository import GithubRepository
-from src.repositories.user_repository import UserRepository
-from src.routes.timeline import get_timeline_service
+from src.routes.auth import get_auth_service
 from src.schemas.integrations.github import (
     GithubAuthUrlResponse,
     GithubSyncStatusResponse,
@@ -19,7 +16,7 @@ from src.schemas.integrations.github import (
     RepositoryInDB,
 )
 from src.services.auth_service import AuthService
-from src.services.integrations.analysis.significance_analyzer_service import SignificanceAnalyzerService
+from src.services.factory import ServiceFactory
 from src.services.integrations.github_service import GithubService
 from src.services.timeline_service import TimelineService
 
@@ -27,25 +24,11 @@ router = APIRouter(prefix="/integrations/github", tags=["GitHub Integration"])
 security = HTTPBearer()
 
 
-def get_auth_service(db: Annotated[AsyncSession, Depends(get_db)]) -> AuthService:
-    """Dependency to get AuthService with database session."""
-    return AuthService(UserRepository(db))
-
-
-def get_github_service(
-    db: Annotated[AsyncSession, Depends(get_db)],
-    timeline_service: Annotated[TimelineService, Depends(get_timeline_service)],
-) -> GithubService:
+def get_github_service(db: Annotated[AsyncSession, Depends(get_db)]) -> GithubService:
     """
     Dependency to get GitHubService.
-    It reuses get_timeline_service to ensure AI and Clustering are injected correctly.
     """
-    return GithubService(
-        repo=GithubRepository(db),
-        external_profile_repo=ExternalProfileRepository(db),
-        analyzer_service=SignificanceAnalyzerService(),
-        timeline_service=timeline_service,
-    )
+    return ServiceFactory.create_github_service(db)
 
 
 @router.get("/auth-url")
