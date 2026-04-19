@@ -18,7 +18,7 @@ from src.schemas.integrations.github import (
 from src.services.auth_service import AuthService
 from src.services.factory import ServiceFactory
 from src.services.integrations.github_service import GithubService
-from src.services.timeline_service import TimelineService
+from src.workers.github import github_full_sync_worker, github_timeline_worker
 
 router = APIRouter(prefix="/integrations/github", tags=["GitHub Integration"])
 security = HTTPBearer()
@@ -88,7 +88,7 @@ async def start_github_sync(
             details={"message": "Another sync is already in progress for this profile."},
         )
 
-    background_tasks.add_task(github_service.run_full_sync, access_token=access_token, github_profile=github_profile)
+    background_tasks.add_task(github_full_sync_worker, user_id=user_id, access_token=access_token)
     return OperationStatusResponse(
         message="GitHub synchronization has been started.",
         status=OperationStatusEnum.accepted,
@@ -128,9 +128,7 @@ async def sync_github_timelines(
             status=OperationStatusEnum.queued,
         )
 
-    background_tasks.add_task(
-        github_service.generate_github_timelines, token_data=token_data, repository_ids=locked_repo_ids
-    )
+    background_tasks.add_task(github_timeline_worker, token_data=token_data, repository_ids=locked_repo_ids)
     return OperationStatusResponse(
         message="Timeline generation for all repositories started in the background.",
         status=OperationStatusEnum.accepted,
