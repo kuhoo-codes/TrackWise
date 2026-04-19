@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
 from src.db.database import get_db
-from src.repositories.user_repository import UserRepository
 from src.schemas.users import Token, User, UserCreate, UserLogin
 from src.services.auth_service import AuthService
+from src.services.factory import ServiceFactory
 
 router = APIRouter(tags=["Auth"], prefix="/auth")
 security = HTTPBearer()
@@ -17,7 +17,7 @@ security = HTTPBearer()
 
 def get_auth_service(db: Annotated[AsyncSession, Depends(get_db)]) -> AuthService:
     """Dependency to get AuthService with database session."""
-    return AuthService(UserRepository(db))
+    return ServiceFactory.create_auth_service(db)
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED, response_model=Token)
