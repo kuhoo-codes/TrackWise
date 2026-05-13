@@ -12,6 +12,7 @@ on:
 env:
   PYTHON_VERSION: '3.10'
   NODE_VERSION: '23.x'
+  PNPM_VERSION: '9.x'
   POSTGRES_USER: test_user
   POSTGRES_PASSWORD: test_password
   POSTGRES_DB: test_db
@@ -52,6 +53,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Authorize pnpm builds
+        run: pnpm config set only-built-dependencies "@tailwindcss/oxide,esbuild"
 
       - name: Export DATABASE_URL from DB env vars
         run: |
