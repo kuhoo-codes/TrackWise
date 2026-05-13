@@ -1,12 +1,14 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import UploadFile
 from jose import jwt
 
 from src.exceptions.auth import AuthenticationError, InvalidTokenError, TokenExpiredError, UserAlreadyExistsError
+from src.exceptions.validation import ValidationError
 from src.models.users import User
-from src.schemas.users import UserCreate
+from src.schemas.users import UserCreate, UserUpdate
 from src.services.auth_service import AuthService
 
 
@@ -194,3 +196,99 @@ async def test_add_to_blacklist(mock_redis: MagicMock, auth_service: AuthService
 
     # --- Assert ---
     mock_redis.set.assert_called_once_with(token, "blacklisted", ex=auth_service.access_token_expire_minutes * 60)
+
+
+# --- User Update and Avatar Tests ---
+
+
+@pytest.mark.asyncio
+async def test_update_user_metadata(auth_service: AuthService, mock_user_repo: AsyncMock) -> None:
+    # --- Setup ---
+    user_id = 1
+    update_data = UserUpdate(name="Updated Name", headline="Software Engineer")
+    mock_user_repo.update_user.return_value = MagicMock(spec=User)
+
+    # --- Execute ---
+    await auth_service.update_user(user_id, update_data)
+
+    # --- Assert ---
+    mock_user_repo.update_user.assert_called_once_with(user_id=user_id, profile_data=update_data)
+
+
+@pytest.mark.asyncio
+async def test_get_avatar_info_success(auth_service: AuthService, mock_user_repo: AsyncMock) -> None:
+    # --- Setup ---
+    user_id = 1
+    expected_info = (datetime.now(), "image/png")
+    mock_user_repo.get_avatar_metadata.return_value = expected_info
+
+    # --- Execute ---
+    result = await auth_service.get_avatar_info(user_id)
+
+    # --- Assert ---
+    assert result == expected_info
+    mock_user_repo.get_avatar_metadata.assert_called_once_with(user_id)
+
+
+@pytest.mark.asyncio
+async def test_get_avatar_bytes_success(auth_service: AuthService, mock_user_repo: AsyncMock) -> None:
+    # --- Setup ---
+    user_id = 1
+    expected_bytes = b"fake_image_blob"
+    mock_user_repo.get_avatar_blob.return_value = expected_bytes
+
+    # --- Execute ---
+    result = await auth_service.get_avatar_bytes(user_id)
+
+    # --- Assert ---
+    assert result == expected_bytes
+    mock_user_repo.get_avatar_blob.assert_called_once_with(user_id)
+
+
+@pytest.mark.asyncio
+async def test_update_avatar_success(auth_service: AuthService, mock_user_repo: AsyncMock) -> None:
+    # --- Setup ---
+    user_id = 1
+    file_content = b"fake_image_data"
+
+    # Mock FastAPI UploadFile
+    mock_file = AsyncMock(spec=UploadFile)
+    mock_file.content_type = "image/jpeg"
+    mock_file.read.return_value = file_content
+
+    # --- Execute ---
+    await auth_service.update_avatar(user_id, mock_file)
+
+    # --- Assert ---
+    mock_user_repo.upload_avatar.assert_called_once_with(user_id=user_id, blob=file_content, mime_type="image/jpeg")
+    mock_file.read.assert_called_once()
+    mock_file.close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_update_avatar_invalid_type(auth_service: AuthService, mock_user_repo: AsyncMock) -> None:
+    # --- Setup ---
+    user_id = 1
+    mock_file = AsyncMock(spec=UploadFile)
+    mock_file.content_type = "text/plain"  # Invalid type
+
+    # --- Execute and Assert ---
+    with pytest.raises(ValidationError) as exc_info:
+        await auth_service.update_avatar(user_id, mock_file)
+
+    assert "Invalid file type" in str(exc_info.value)
+    mock_user_repo.upload_avatar.assert_not_called()
+    # The finally block should still close the file
+    mock_file.close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_remove_avatar_success(auth_service: AuthService, mock_user_repo: AsyncMock) -> None:
+    # --- Setup ---
+    user_id = 1
+
+    # --- Execute ---
+    await auth_service.remove_avatar(user_id)
+
+    # --- Assert ---
+    mock_user_repo.remove_avatar.assert_called_once_with(user_id=user_id)
