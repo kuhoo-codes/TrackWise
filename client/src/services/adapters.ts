@@ -36,6 +36,8 @@ export const adaptUser = (data: ApiUser): User => ({
   lastLogin: new Date(data.last_login),
   createdAt: new Date(data.created_at),
   updatedAt: new Date(data.updated_at),
+  headline: data.headline || undefined,
+  hasAvatar: data.has_avatar,
 });
 
 export const adaptAuthResponse = (data: ApiAuthResponse): AuthResponse => ({

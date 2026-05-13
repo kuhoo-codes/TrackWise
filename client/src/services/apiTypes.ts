@@ -7,6 +7,8 @@ export interface ApiUser {
   last_login: string;
   created_at: string;
   updated_at: string;
+  headline?: string;
+  has_avatar: boolean;
 }
 
 export interface ApiAuthResponse {

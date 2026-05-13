@@ -12,6 +12,7 @@ import {
   type User,
   type LoginRequest,
   type SignupRequest,
+  type UserUpdateRequest,
 } from "@/services/types";
 
 interface AuthState {
@@ -23,9 +24,11 @@ interface AuthContextType extends AuthState {
   isAuthenticated: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
   signup: (userData: SignupRequest) => Promise<void>;
+  updateUser: (data: UserUpdateRequest) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
   resetAuthState: () => void;
+  refreshUser: (user: User) => void;
   token?: string | null;
 }
 
@@ -117,6 +120,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateUser = async (data: UserUpdateRequest): Promise<void> => {
+    try {
+      setState((prev) => ({ ...prev, isLoading: true, errorMessage: null }));
+
+      const updatedUser = await AuthService.updateUser(data);
+
+      setState((prev) => ({
+        ...prev,
+        user: updatedUser,
+        isLoading: false,
+      }));
+    } catch (error) {
+      const msg = getErrorMessage(error, "Failed to update profile");
+      setState((prev) => ({
+        ...prev,
+        errorMessage: msg,
+        isLoading: false,
+      }));
+      throw error;
+    }
+  };
+
   const logout = async (): Promise<void> => {
     try {
       const token = TokenStorage.getToken();
@@ -139,6 +164,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
+  const refreshUser = (user: User) => {
+    setState((prev) => ({ ...prev, user }));
+  };
+
   const value: AuthContextType = {
     user: state.user,
     isAuthenticated: !!state.user,
@@ -146,8 +175,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     errorMessage: state.errorMessage,
     login,
     signup,
+    updateUser,
     logout,
     clearError,
+    refreshUser,
     resetAuthState,
     token: state.user ? TokenStorage.getToken() : null,
   };
