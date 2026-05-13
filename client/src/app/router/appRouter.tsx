@@ -3,9 +3,9 @@ import { Routes, Route, Navigate, Link, useParams } from "react-router-dom";
 import { Login, Signup } from "@/features/auth";
 import { Dashboard, GithubCallback } from "@/features/dashboard";
 import { Integrations } from "@/features/integration";
+import { Settings } from "@/features/settings";
 import { Timeline } from "@/features/timeline";
 import { AppLayout } from "@/shared/components/layout/appLayout";
-import { Layout } from "@/shared/components/layout/layout";
 import { ProtectedRoute } from "./protectedRoute";
 import { ROUTES } from "./routes";
 
@@ -58,34 +58,28 @@ export const AppRouter: React.FC = () => (
       <Route path={ROUTES.GITHUB_CALLBACK} element={<GithubCallback />} />
 
       <Route path={ROUTES.INTEGRATIONS} element={<Integrations />} />
-      <Route path={ROUTES.SETTINGS} element={<div>Settings Page</div>} />
+      <Route path={ROUTES.SETTINGS} element={<Settings />} />
     </Route>
 
     {/* --- REDIRECTS --- */}
     <Route path="/" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
-    <Route
-      path="*"
-      element={<div className="p-20 text-center">404: Not Found</div>}
-    />
 
     {/* Catch all - 404 */}
     <Route
       path="*"
       element={
-        <Layout>
-          <div className="min-h-[50vh] flex items-center justify-center">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-              <p className="text-gray-600 mb-4">Page not found</p>
-              <Link
-                to={ROUTES.DASHBOARD}
-                className="text-blue-600 hover:underline"
-              >
-                Go to Dashboard
-              </Link>
-            </div>
+        <div className="min-h-[50vh] flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
+            <p className="text-gray-600 mb-4">Page not found</p>
+            <Link
+              to={ROUTES.DASHBOARD}
+              className="text-blue-600 hover:underline"
+            >
+              Go to Dashboard
+            </Link>
           </div>
-        </Layout>
+        </div>
       }
     />
   </Routes>
