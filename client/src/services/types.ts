@@ -7,6 +7,8 @@ const UserSchema = z.object({
   lastLogin: z.coerce.date(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  headline: z.string().optional(),
+  hasAvatar: z.boolean(),
 });
 
 export type User = z.infer<typeof UserSchema>;
@@ -18,6 +20,11 @@ export interface LoginRequest {
 
 export interface SignupRequest extends LoginRequest {
   name: string;
+}
+
+export interface UserUpdateRequest {
+  name?: string;
+  headline?: string;
 }
 
 export const AuthResponseSchema = z.object({
