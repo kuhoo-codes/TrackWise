@@ -1,16 +1,11 @@
-import {
-  ChevronRight,
-  User,
-  LogOut,
-  Settings,
-  ExternalLink,
-} from "lucide-react";
+import { ChevronRight, LogOut, Settings, ExternalLink } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
 import { Outlet, useLocation, Link } from "react-router-dom";
 import { ROUTES } from "@/app/router/routes";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useGithubConnect } from "@/shared/hooks/useGithubConnect";
 import { Sidebar } from "./sidebar";
+import { UserAvatar } from "./userAvatar";
 
 export const AppLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -61,12 +56,10 @@ export const AppLayout: React.FC = () => {
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className="flex items-center gap-2 p-0.5 rounded-full hover:bg-secondary transition-all"
             >
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-tighter shadow-sm">
-                {user?.name?.substring(0, 2) || <User className="w-4 h-4" />}
-              </div>
+              <UserAvatar size="sm" />
             </button>
 
-            {/* Premium Dropdown Menu */}
+            {/* Dropdown Menu */}
             {isUserMenuOpen && (
               <div className="absolute right-0 top-10 mt-2 w-56 bg-white border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                 <div className="p-3 border-b border-border/40 bg-canvas/50">
