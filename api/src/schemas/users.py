@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from src.core.config import Errors, settings
 from src.exceptions.validation import ValidationError
@@ -36,6 +36,15 @@ class UserCreate(UserBase):
 class User(UserBase, TimestampSchema):
     id: int
     last_login: datetime
+    headline: str | None = None
+    has_avatar: bool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_avatar_exists(cls, data: object) -> object:
+        if hasattr(data, "media_type"):
+            data.has_avatar = data.media_type is not None
+        return data
 
 
 class UserInDB(User):
@@ -47,6 +56,37 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=100)
+    headline: str | None = Field(None, max_length=150)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        # Ensure name isn't just whitespace
+        if not v.strip():
+            msg = "Name cannot be empty or only whitespace"
+            raise ValidationError(msg, details={"field": "name", "reason": "whitespace_only"})
+        # Prevent specific characters if needed
+        if re.search(r"[<>{}[\]\\]", v):
+            msg = "Name contains invalid characters"
+            raise ValidationError(msg, details={"field": "name", "reason": "invalid_characters"})
+        return v.strip()
+
+    @field_validator("headline")
+    @classmethod
+    def validate_headline(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        # Headlines can be empty strings, but not just spaces
+        if v != "" and not v.strip():
+            msg = "Headline cannot be only whitespace"
+            raise ValidationError(msg, details={"field": "headline", "reason": "whitespace_only"})
+        return v.strip()
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -56,3 +96,9 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     sub: int
     email: str
+
+
+class AvatarUpdateResponse(BaseModel):
+    message: str
+    has_avatar: bool
+    avatar_url: str
