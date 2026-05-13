@@ -1,13 +1,14 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, Header, Response, UploadFile, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
 from src.db.database import get_db
-from src.schemas.users import Token, User, UserCreate, UserLogin
+from src.schemas.users import AvatarUpdateResponse, Token, User, UserCreate, UserLogin, UserUpdate
 from src.services.auth_service import AuthService
 from src.services.factory import ServiceFactory
 
@@ -56,6 +57,20 @@ async def get_user_data(
     return User.model_validate(user)
 
 
+@router.patch("/me", status_code=status.HTTP_200_OK, response_model=User)
+async def update_user(
+    update_data: UserUpdate,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> User:
+    """Updates the current user's name and headline."""
+    token_data = auth_service.verify_token(token=credentials.credentials)
+
+    updated_user = await auth_service.update_user(user_id=token_data.sub, profile_data=update_data)
+
+    return User.model_validate(updated_user)
+
+
 @router.delete("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
@@ -64,3 +79,81 @@ async def logout(
     """Logout user by invalidating the token."""
     token = credentials.credentials
     await auth_service.add_to_blacklist(token=token)
+
+
+@router.patch("/me/avatar", status_code=status.HTTP_200_OK, response_model=AvatarUpdateResponse)
+async def upload_avatar(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    file: Annotated[UploadFile, File()],
+) -> AvatarUpdateResponse:
+    """
+    Uploads and stores an avatar image as binary data in the database.
+    Only allows image MIME types.
+    """
+    token_data = auth_service.verify_token(token=credentials.credentials)
+    user_id = token_data.sub
+    await auth_service.update_avatar(user_id=user_id, file=file)
+
+    return AvatarUpdateResponse(
+        message="Avatar updated successfully", has_avatar=True, avatar_url=f"/auth/users/avatar/{user_id}"
+    )
+
+
+@router.get("/me/avatar", status_code=status.HTTP_200_OK)
+async def get_avatar(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    if_none_match: Annotated[str | None, Header()] = None,
+) -> Response:
+    """
+    Serves avatar with ETag validation using DB timestamps.
+    Prevents binary transfer if the browser's cache is current.
+    """
+    # 1. Get metadata only (Fast DB hit)
+
+    token_data = auth_service.verify_token(token=credentials.credentials)
+    user_id = token_data.sub
+    metadata = await auth_service.get_avatar_info(user_id=user_id)
+    logger.error(f"Received If-None-Match: {if_none_match} from client")
+
+    if not metadata:
+        return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+    updated_at, media_type = metadata
+
+    # 2. Generate Weak ETag based on unix timestamp
+    etag = f'W/"{int(updated_at.timestamp())}"'
+
+    logger.error(f"Generated ETag: {etag} for user_id: {user_id} with updated_at: {updated_at}")
+
+    # 3. Check for Cache Hit (Return 304 - No Body)
+    if if_none_match == etag:
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED)
+
+    # 4. Cache Miss - Get the heavy bytes
+    avatar_blob = await auth_service.get_avatar_bytes(user_id=user_id)
+    if not avatar_blob:
+        return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+    # 5. Return Full Image
+    return Response(
+        content=avatar_blob,
+        media_type=media_type,
+        headers={
+            "ETag": etag,
+            "Cache-Control": "public, max-age=31536000",  # 1 year
+        },
+    )
+
+
+@router.delete("/me/avatar", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_avatar(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> None:
+    """Removes the user's avatar and resets to default initials."""
+    token_data = auth_service.verify_token(token=credentials.credentials)
+    user_id = token_data.sub
+
+    await auth_service.remove_avatar(user_id=user_id)

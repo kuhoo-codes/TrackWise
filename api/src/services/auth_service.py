@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from fastapi import UploadFile
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from redis.exceptions import ConnectionError
@@ -14,9 +15,10 @@ from src.exceptions.auth import (
     UserNotFoundError,
 )
 from src.exceptions.external import ExternalServiceError
+from src.exceptions.validation import ValidationError
 from src.models.users import User
 from src.repositories.user_repository import UserRepository
-from src.schemas.users import TokenData, UserCreate
+from src.schemas.users import TokenData, UserCreate, UserUpdate
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -83,6 +85,10 @@ class AuthService:
 
         return await self.user_repo.create_user(user=db_user)
 
+    async def update_user(self, user_id: int, profile_data: UserUpdate) -> User:
+        """Updates user text metadata."""
+        return await self.user_repo.update_user(user_id=user_id, profile_data=profile_data)
+
     async def authenticate_user(self, email: str, password: str) -> User:
         """Authenticate user and return access token."""
         # Get user by email
@@ -95,6 +101,35 @@ class AuthService:
             raise AuthenticationError(Errors.INVALID_EMAIL_OR_PASSWORD.value, details={"email": email})
 
         return user
+
+    async def get_avatar_info(self, user_id: int) -> tuple[datetime, str] | None:
+        """Fetches metadata for cache validation."""
+        return await self.user_repo.get_avatar_metadata(user_id)
+
+    async def get_avatar_bytes(self, user_id: int) -> bytes | None:
+        """Fetches the raw image bytes."""
+        return await self.user_repo.get_avatar_blob(user_id)
+
+    async def update_avatar(self, user_id: int, file: UploadFile) -> None:
+        """
+        Business logic for updating a user avatar.
+        Handles file type validation and reading file bytes.
+        """
+        try:
+            if not file.content_type or not file.content_type.startswith("image/"):
+                msg = "Invalid file type. Please upload an image (JPG, PNG, WebP)."
+                raise ValidationError(msg, details={"field": "file", "file_type": f"received: {file.content_type}"})
+
+            blob = await file.read()
+            await self.user_repo.upload_avatar(user_id=user_id, blob=blob, mime_type=file.content_type)
+        except Exception as e:
+            raise e
+        finally:
+            await file.close()
+
+    async def remove_avatar(self, user_id: int) -> None:
+        """Business logic to clear avatar data."""
+        await self.user_repo.remove_avatar(user_id=user_id)
 
     async def get_user_by_email(self, email: str) -> User:
         """Get user by email."""
