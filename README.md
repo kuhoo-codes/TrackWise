@@ -7,6 +7,50 @@ It's ideal as:
 - A private **progress tracker**, or
 - A smart **resume generator** with upcoming GitHub/LinkedIn/Notion integrations.
 
+## Visual Tour
+
+### Login
+
+<img width="1469" height="807" alt="Image" src="https://github.com/user-attachments/assets/542fa3f1-40bf-443a-96f1-4553ff75b5b6" />
+
+### Dashboard
+
+<img width="1470" height="809" alt="Image" src="https://github.com/user-attachments/assets/20f8138d-9fed-4615-8e46-71ffaf160b71" />
+
+<img width="1470" height="809" alt="Image" src="https://github.com/user-attachments/assets/bbede144-54e0-4cb6-b86e-c63ee7d9a13d" />
+
+<img width="1470" height="811" alt="Image" src="https://github.com/user-attachments/assets/c367229c-f1e9-45dc-996a-a0da516b2dcb" />
+
+<img width="1470" height="810" alt="Image" src="https://github.com/user-attachments/assets/16140ae4-9f00-4491-bb3a-6118a306e6d2" />
+
+### Integrations
+
+<img width="1470" height="809" alt="Image" src="https://github.com/user-attachments/assets/cb766eb0-58b0-45c4-89c2-b9eff4295041" />
+
+<img width="1470" height="809" alt="Image" src="https://github.com/user-attachments/assets/6a2236ca-f0ef-447f-9d32-eb2555694669" />
+
+### Timeline
+
+<img width="1470" height="807" alt="Image" src="https://github.com/user-attachments/assets/c4c019d2-ef97-4783-89e1-8fef7615ea22" />
+
+<img width="1470" height="815" alt="Image" src="https://github.com/user-attachments/assets/1e4d0572-3386-4798-a0c8-b4632b04ded3" />
+
+### Settings
+
+<img width="1470" height="809" alt="Image" src="https://github.com/user-attachments/assets/97f7b056-2af7-4d1b-b9f9-da2a8c6ad80c" />
+
+
+## Key Features
+- 🏗️ Timeline Node Editor: A modular way to build and edit your achievements. Drag, drop, and refine your story.
+
+- 🤖 AI-Powered Context: Leveraging AI to generate professional summaries and introspect on your growth.
+
+- 🔗 GitHub Integration: Automatically sync PRs, commits, and contributions into your professional timeline.
+
+- 🖼️ Dynamic Profile Management: High-performance avatar system using binary storage and weak ETag caching for instant load times.
+
+- 🔒 Secure Architecture: JWT-based authentication with Redis-backed token blacklisting for secure logouts.
+
 ## Project Structure
 
 ```
